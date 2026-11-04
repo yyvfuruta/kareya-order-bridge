@@ -94,6 +94,9 @@ Copie `.env.example` para `.env.local` e preencha:
 | `BRIDGE_POLL_ALL_EVENTS` | não | `true` reenvia qualquer evento como `PLACED` (só use se estiver perdendo pedido). |
 | `BRIDGE_LOG_HEADERS` | não | `true` loga headers de requisições sem token. |
 
+Os logs saem em **JSON**, uma linha por evento (`time`, `level`, `msg` e campos),
+tanto no console quanto no `BRIDGE_LOG_FILE`.
+
 ### De-para de produtos (`externalCode`)
 
 Pedidos de marketplace (99Food) vêm com `externalCode` vazio. O Consumer precisa

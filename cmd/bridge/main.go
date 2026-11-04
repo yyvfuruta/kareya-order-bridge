@@ -164,14 +164,14 @@ func setupLogger() (*slog.Logger, *os.File) {
 
 	path := strings.TrimSpace(os.Getenv("BRIDGE_LOG_FILE"))
 	if path == "" {
-		return slog.New(slog.NewTextHandler(os.Stdout, opts)), nil
+		return slog.New(slog.NewJSONHandler(os.Stdout, opts)), nil
 	}
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		fatal("erro abrindo BRIDGE_LOG_FILE: " + err.Error())
 	}
-	return slog.New(slog.NewTextHandler(io.MultiWriter(os.Stdout, file), opts)), file
+	return slog.New(slog.NewJSONHandler(io.MultiWriter(os.Stdout, file), opts)), file
 }
 
 func loadProducts(path string) (consumer.ProductMap, error) {
@@ -243,6 +243,6 @@ func loadEnv(path string) error {
 }
 
 func fatal(msg string) {
-	fmt.Fprintln(os.Stderr, msg)
+	slog.Error(msg)
 	os.Exit(1)
 }
