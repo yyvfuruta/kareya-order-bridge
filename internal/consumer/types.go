@@ -1,16 +1,15 @@
-// Package consumer define os schemas da API do parceiro esperados pelo
-// Consumer (sistema de gestao do restaurante) e a traducao a partir do
-// pedido da Brendi.
+// Package consumer defines the partner API schemas expected by Consumer (the
+// restaurant management system) and the translation from Brendi orders.
 package consumer
 
-// PollingResponse e o corpo de GET no endpoint de polling.
+// PollingResponse is the body returned by the polling endpoint.
 type PollingResponse struct {
 	Items        []PollingEvent `json:"items"`
 	StatusCode   int            `json:"statusCode"`
 	ReasonPhrase *string        `json:"reasonPhrase"`
 }
 
-// PollingEvent e um evento de pedido novo.
+// PollingEvent is a new-order event.
 type PollingEvent struct {
 	ID        string `json:"id"`
 	OrderID   string `json:"orderId"`
@@ -19,47 +18,47 @@ type PollingEvent struct {
 	Code      string `json:"code"`
 }
 
-// OrderResponse e o corpo do endpoint de detalhes do pedido.
+// OrderResponse is the body returned by the order details endpoint.
 type OrderResponse struct {
 	Item         Order   `json:"item"`
 	StatusCode   int     `json:"statusCode"`
 	ReasonPhrase *string `json:"reasonPhrase"`
 }
 
-// EventResponse e o corpo do endpoint de consulta de um evento.
+// EventResponse is the body returned by the single-event endpoint.
 type EventResponse struct {
 	Item         PollingEvent `json:"item"`
 	StatusCode   int          `json:"statusCode"`
 	ReasonPhrase *string      `json:"reasonPhrase"`
 }
 
-// StoresResponse e o corpo do endpoint de listagem de lojas.
+// StoresResponse is the body returned by the store listing endpoint.
 type StoresResponse struct {
 	Items        []Store `json:"items"`
 	StatusCode   int     `json:"statusCode"`
 	ReasonPhrase *string `json:"reasonPhrase"`
 }
 
-// Store identifica uma loja do parceiro.
+// Store identifies a partner store.
 type Store struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// StatusRequest e o corpo enviado pelo Consumer ao alterar o status.
+// StatusRequest is the body sent by Consumer when changing an order status.
 type StatusRequest struct {
 	OrderID       string `json:"orderId"`
 	Status        string `json:"status"`
 	Justification string `json:"justification,omitempty"`
 }
 
-// Response e a resposta padrao de sucesso/erro das operacoes.
+// Response is the standard success/error response for operations.
 type Response struct {
 	StatusCode   int     `json:"statusCode"`
 	ReasonPhrase *string `json:"reasonPhrase"`
 }
 
-// Order e o pedido no formato esperado pelo Consumer.
+// Order is the order in the format expected by Consumer.
 type Order struct {
 	ID                       string    `json:"id"`
 	DisplayID                string    `json:"displayId"`
@@ -80,13 +79,13 @@ type Order struct {
 	ExtraInfo                string    `json:"extraInfo,omitempty"`
 }
 
-// Merchant e a loja que recebeu o pedido.
+// Merchant is the store that received the order.
 type Merchant struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// Item e uma linha do pedido.
+// Item is an order line.
 type Item struct {
 	ID               string   `json:"id"`
 	Index            int      `json:"index,omitempty"`
@@ -102,7 +101,7 @@ type Item struct {
 	ConsumerItemInfo any      `json:"consumerItemInfo,omitempty"`
 }
 
-// Option e um complemento do item.
+// Option is an item modifier.
 type Option struct {
 	Name         string  `json:"name"`
 	ExternalCode string  `json:"externalCode,omitempty"`
@@ -112,7 +111,7 @@ type Option struct {
 	Index        int     `json:"index,omitempty"`
 }
 
-// Benefit e um desconto aplicado ao pedido.
+// Benefit is a discount applied to the order.
 type Benefit struct {
 	Target            string             `json:"target"`
 	TargetID          string             `json:"targetId,omitempty"`
@@ -120,14 +119,14 @@ type Benefit struct {
 	SponsorshipValues []SponsorshipValue `json:"sponsorshipValues,omitempty"`
 }
 
-// SponsorshipValue diz quem bancou o desconto.
+// SponsorshipValue says who funded the discount.
 type SponsorshipValue struct {
 	Name        string  `json:"name"`
 	Value       float64 `json:"value"`
 	Description string  `json:"description,omitempty"`
 }
 
-// Total resume os valores do pedido.
+// Total summarizes the order amounts.
 type Total struct {
 	SubTotal       float64 `json:"subTotal"`
 	DeliveryFee    float64 `json:"deliveryFee"`
@@ -136,14 +135,14 @@ type Total struct {
 	OrderAmount    float64 `json:"orderAmount"`
 }
 
-// Payments descreve o pagamento do pedido.
+// Payments describes the order payment.
 type Payments struct {
 	Prepaid float64   `json:"prepaid"`
 	Pending float64   `json:"pending"`
 	Methods []Payment `json:"methods"`
 }
 
-// Payment e uma forma de pagamento.
+// Payment is a payment method.
 type Payment struct {
 	Value       float64      `json:"value"`
 	Currency    string       `json:"currency"`
@@ -156,18 +155,18 @@ type Payment struct {
 	ChangeFor   float64      `json:"changeFor,omitempty"`
 }
 
-// Card traz a bandeira do cartao (o Consumer le em payments.methods.card.brand).
+// Card carries the card brand (Consumer reads it from payments.methods.card.brand).
 type Card struct {
 	Brand string `json:"brand"`
 }
 
-// Transaction traz dados de autorizacao do cartao.
+// Transaction carries card authorization data.
 type Transaction struct {
 	AuthorizationCode string `json:"authorizationCode,omitempty"`
 	AcquirerDocument  string `json:"acquirerDocument,omitempty"`
 }
 
-// Customer e o cliente do pedido.
+// Customer is the order customer.
 type Customer struct {
 	ID                    string  `json:"id"`
 	Name                  string  `json:"name"`
@@ -177,7 +176,7 @@ type Customer struct {
 	OrdersCountOnMerchant float64 `json:"ordersCountOnMerchant"`
 }
 
-// Phone e o telefone de contato.
+// Phone is the contact phone.
 type Phone struct {
 	Number              string `json:"number"`
 	Extension           string `json:"extension,omitempty"`
@@ -185,7 +184,7 @@ type Phone struct {
 	LocalizerExpiration string `json:"localizerExpiration"`
 }
 
-// Delivery agrupa os dados de entrega.
+// Delivery groups the delivery data.
 type Delivery struct {
 	Mode             string  `json:"mode"`
 	DeliveredBy      string  `json:"deliveredBy"`
@@ -194,7 +193,7 @@ type Delivery struct {
 	DeliveryAddress  Address `json:"deliveryAddress"`
 }
 
-// Address e o endereco de entrega no formato do Consumer.
+// Address is the delivery address in the Consumer format.
 type Address struct {
 	Country          string      `json:"country"`
 	State            string      `json:"state"`
@@ -209,19 +208,19 @@ type Address struct {
 	Coordinates      Coordinates `json:"coordinates"`
 }
 
-// Coordinates sao as coordenadas do endereco.
+// Coordinates are the address coordinates.
 type Coordinates struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
 
-// Takeout agrupa os dados de retirada.
+// Takeout groups the pickup data.
 type Takeout struct {
 	Mode            string `json:"mode"`
 	TakeoutDateTime string `json:"takeoutDateTime"`
 }
 
-// Indoor agrupa os dados de consumo no salao.
+// Indoor groups the dine-in data.
 type Indoor struct {
 	Mode           string `json:"mode"`
 	IndoorDateTime string `json:"indoorDateTime"`

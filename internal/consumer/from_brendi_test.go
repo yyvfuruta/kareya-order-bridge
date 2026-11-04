@@ -12,11 +12,11 @@ func loadOrder(t *testing.T) *brendi.Order {
 	t.Helper()
 	raw, err := os.ReadFile("../brendi/testdata/order.json")
 	if err != nil {
-		t.Fatalf("ler fixture: %v", err)
+		t.Fatalf("read fixture: %v", err)
 	}
 	var order brendi.Order
 	if err := json.Unmarshal(raw, &order); err != nil {
-		t.Fatalf("decodificar fixture: %v", err)
+		t.Fatalf("decode fixture: %v", err)
 	}
 	return &order
 }
@@ -28,46 +28,46 @@ func TestFromBrendi(t *testing.T) {
 	})
 
 	if got.ID != order.ID {
-		t.Errorf("id = %q, quer %q", got.ID, order.ID)
+		t.Errorf("id = %q, want %q", got.ID, order.ID)
 	}
 	if got.DisplayID != "661009" {
 		t.Errorf("displayId = %q", got.DisplayID)
 	}
 	if got.OrderTiming != "IMMEDIATE" {
-		t.Errorf("orderTiming = %q, quer IMMEDIATE", got.OrderTiming)
+		t.Errorf("orderTiming = %q, want IMMEDIATE", got.OrderTiming)
 	}
 	if got.CreatedAt == "" || got.PreparationStartDateTime == "" {
-		t.Errorf("datas vazias: createdAt=%q preparation=%q", got.CreatedAt, got.PreparationStartDateTime)
+		t.Errorf("empty dates: createdAt=%q preparation=%q", got.CreatedAt, got.PreparationStartDateTime)
 	}
 
 	if len(got.Items) != 1 {
-		t.Fatalf("itens = %d, quer 1", len(got.Items))
+		t.Fatalf("items = %d, want 1", len(got.Items))
 	}
 	item := got.Items[0]
 	if item.Name != "Donburi katsudon" {
-		t.Errorf("nome do item = %q", item.Name)
+		t.Errorf("item name = %q", item.Name)
 	}
 	if item.ExternalCode != "112" {
-		t.Errorf("externalCode = %q, quer o de-para por nome", item.ExternalCode)
+		t.Errorf("externalCode = %q, want the name mapping", item.ExternalCode)
 	}
 	if item.Quantity != 1 || item.UnitPrice != 37.03 || item.TotalPrice != 37.03 {
-		t.Errorf("valores do item errados: %+v", item)
+		t.Errorf("wrong item amounts: %+v", item)
 	}
 	if item.ID == "" {
-		t.Error("item sem id")
+		t.Error("item without id")
 	}
 
 	if got.Total.SubTotal != 37.03 {
 		t.Errorf("subTotal = %v", got.Total.SubTotal)
 	}
 	if got.Total.DeliveryFee != 4.49 {
-		t.Errorf("deliveryFee = %v, quer 4.49", got.Total.DeliveryFee)
+		t.Errorf("deliveryFee = %v, want 4.49", got.Total.DeliveryFee)
 	}
 	if got.Total.AdditionalFees != 1.86 {
-		t.Errorf("additionalFees = %v, quer 1.86 (6.35 - 4.49)", got.Total.AdditionalFees)
+		t.Errorf("additionalFees = %v, want 1.86 (6.35 - 4.49)", got.Total.AdditionalFees)
 	}
 	if got.Total.Benefits != 4.49 {
-		t.Errorf("benefits = %v, quer 4.49", got.Total.Benefits)
+		t.Errorf("benefits = %v, want 4.49", got.Total.Benefits)
 	}
 	if got.Total.OrderAmount != 38.89 {
 		t.Errorf("orderAmount = %v", got.Total.OrderAmount)
@@ -84,27 +84,27 @@ func TestFromBrendi(t *testing.T) {
 	}
 	addr := got.Delivery.DeliveryAddress
 	if addr.StreetName != "Rua Teste" || addr.StreetNumber != "123" || addr.Neighborhood != "Centro" {
-		t.Errorf("endereco errado: %+v", addr)
+		t.Errorf("wrong address: %+v", addr)
 	}
 	if addr.City != "Curitiba" || addr.State != "PR" || addr.PostalCode != "80000-000" {
-		t.Errorf("cidade/uf/cep errados: %+v", addr)
+		t.Errorf("wrong city/state/postal code: %+v", addr)
 	}
 	if addr.Coordinates.Latitude != -25.4 || addr.Coordinates.Longitude != -49.2 {
-		t.Errorf("coordenadas erradas: %+v", addr.Coordinates)
+		t.Errorf("wrong coordinates: %+v", addr.Coordinates)
 	}
 
 	if got.Customer == nil || got.Customer.Name != "Cliente Teste" {
-		t.Errorf("cliente errado: %+v", got.Customer)
+		t.Errorf("wrong customer: %+v", got.Customer)
 	}
 	if got.Customer != nil && got.Customer.Phone.Number != "5511999999999" {
-		t.Errorf("telefone = %q", got.Customer.Phone.Number)
+		t.Errorf("phone = %q", got.Customer.Phone.Number)
 	}
 
 	if got.Payments.Prepaid != 38.89 || got.Payments.Pending != 0 {
-		t.Errorf("payments errados: %+v", got.Payments)
+		t.Errorf("wrong payments: %+v", got.Payments)
 	}
 	if len(got.Payments.Methods) != 1 || got.Payments.Methods[0].Method != "PIX" {
-		t.Errorf("formas de pagamento erradas: %+v", got.Payments.Methods)
+		t.Errorf("wrong payment methods: %+v", got.Payments.Methods)
 	}
 }
 
@@ -114,13 +114,13 @@ func TestProductMapPrefersExternalCode(t *testing.T) {
 		ByName:         map[string]string{"ABC": "111"},
 	}
 	if got := products.Lookup("ABC", "ABC"); got != "999" {
-		t.Errorf("lookup = %q, quer 999", got)
+		t.Errorf("lookup = %q, want 999", got)
 	}
 	if got := products.Lookup("", "ABC"); got != "111" {
-		t.Errorf("lookup por nome = %q, quer 111", got)
+		t.Errorf("name lookup = %q, want 111", got)
 	}
-	if got := products.Lookup("", "SEM MAPA"); got != "" {
-		t.Errorf("lookup sem mapa = %q, quer vazio", got)
+	if got := products.Lookup("", "NO MAP"); got != "" {
+		t.Errorf("unmapped lookup = %q, want empty", got)
 	}
 }
 
@@ -134,6 +134,6 @@ func TestPaymentCardBrand(t *testing.T) {
 		t.Fatal("card nil")
 	}
 	if card.Brand != "VISA" {
-		t.Errorf("card.brand = %q, quer VISA", card.Brand)
+		t.Errorf("card.brand = %q, want VISA", card.Brand)
 	}
 }

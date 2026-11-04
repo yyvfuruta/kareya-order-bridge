@@ -11,12 +11,12 @@ func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	data, err := os.ReadFile("testdata/" + name)
 	if err != nil {
-		t.Fatalf("lendo fixture %s: %v", name, err)
+		t.Fatalf("reading fixture %s: %v", name, err)
 	}
 	return data
 }
 
-// Payload real (anonimizado) da API da Brendi: ordem de 38,89 com entrega e Pix.
+// Real (anonymized) payload from the Brendi API: 38.89 order with delivery and Pix.
 func TestOrderParsing(t *testing.T) {
 	var order Order
 	if err := json.Unmarshal(readFixture(t, "order.json"), &order); err != nil {
@@ -81,7 +81,7 @@ func TestOrderParsing(t *testing.T) {
 	}
 }
 
-// A Brendi manda "eventId" no polling, mas o ack exige "id".
+// Brendi sends "eventId" in polling, but ack requires "id".
 func TestEventAckMapping(t *testing.T) {
 	var events []Event
 	if err := json.Unmarshal(readFixture(t, "events.json"), &events); err != nil {
@@ -99,7 +99,7 @@ func TestEventAckMapping(t *testing.T) {
 		t.Errorf("event = %+v", event)
 	}
 	if !event.CreatedAt.Valid() {
-		t.Errorf("createdAt nao parseou: %q", event.CreatedAt.Raw)
+		t.Errorf("createdAt did not parse: %q", event.CreatedAt.Raw)
 	}
 
 	ack := event.Ack()
@@ -107,7 +107,7 @@ func TestEventAckMapping(t *testing.T) {
 		t.Errorf("ack = %+v", ack)
 	}
 
-	// O ack precisa sair exatamente com as chaves aceitas pela Brendi.
+	// The ack must be emitted exactly with the keys accepted by Brendi.
 	data, err := json.Marshal([]AckEvent{ack})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -124,9 +124,9 @@ func TestDateTimeToleratesUnknownFormat(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if d.Valid() {
-		t.Errorf("esperava data invalida, veio %v", d.Time)
+		t.Errorf("expected an invalid date, got %v", d.Time)
 	}
 	if d.String() != "04/11/2026 20:00" {
-		t.Errorf("raw perdido: %q", d.String())
+		t.Errorf("raw value lost: %q", d.String())
 	}
 }

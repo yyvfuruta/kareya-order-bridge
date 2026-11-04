@@ -15,7 +15,7 @@ import (
 	"kareya-order-bridge/internal/consumer"
 )
 
-// fakeBrendi simula a API da Brendi o suficiente para exercitar a bridge.
+// fakeBrendi simulates the Brendi API well enough to exercise the bridge.
 type fakeBrendi struct {
 	mu sync.Mutex
 
@@ -134,8 +134,8 @@ func TestAuth(t *testing.T) {
 		mutate func(*http.Request)
 		want   int
 	}{
-		{"sem token", func(*http.Request) {}, http.StatusUnauthorized},
-		{"token errado", func(r *http.Request) { r.Header.Set("Authorization", "Bearer nope") }, http.StatusUnauthorized},
+		{"no token", func(*http.Request) {}, http.StatusUnauthorized},
+		{"wrong token", func(r *http.Request) { r.Header.Set("Authorization", "Bearer nope") }, http.StatusUnauthorized},
 		{"bearer", func(r *http.Request) { r.Header.Set("Authorization", "Bearer secret") }, http.StatusOK},
 		{"api key", func(r *http.Request) { r.Header.Set("X-Api-Key", "secret") }, http.StatusOK},
 		{"query", func(*http.Request) {}, http.StatusOK},
@@ -158,7 +158,7 @@ func TestAuth(t *testing.T) {
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != tc.want {
-				t.Errorf("status = %d, quer %d", resp.StatusCode, tc.want)
+				t.Errorf("status = %d, want %d", resp.StatusCode, tc.want)
 			}
 		})
 	}
@@ -178,13 +178,13 @@ func TestPollingOnlyForwardsCreated(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(body.Items) != 1 {
-		t.Fatalf("items = %d, quer 1: %+v", len(body.Items), body.Items)
+		t.Fatalf("items = %d, want 1: %+v", len(body.Items), body.Items)
 	}
 	if body.Items[0].ID != "evt-1" || body.Items[0].OrderID != "order-1" {
-		t.Errorf("evento = %+v", body.Items[0])
+		t.Errorf("event = %+v", body.Items[0])
 	}
 	if body.Items[0].Code != "PLC" || body.Items[0].FullCode != "PLACED" {
-		t.Errorf("codigo = %q/%q", body.Items[0].Code, body.Items[0].FullCode)
+		t.Errorf("code = %q/%q", body.Items[0].Code, body.Items[0].FullCode)
 	}
 	if body.StatusCode != 0 {
 		t.Errorf("statusCode = %d", body.StatusCode)
@@ -193,10 +193,10 @@ func TestPollingOnlyForwardsCreated(t *testing.T) {
 	fake.mu.Lock()
 	defer fake.mu.Unlock()
 	if len(fake.acked) != 1 || fake.acked[0].ID != "evt-2" {
-		t.Errorf("acks = %+v, quer so o evt-2 (DELIVERED)", fake.acked)
+		t.Errorf("acks = %+v, want only evt-2 (DELIVERED)", fake.acked)
 	}
 	if len(fake.events) != 1 || fake.events[0].Key() != "evt-1" {
-		t.Errorf("eventos restantes = %+v", fake.events)
+		t.Errorf("remaining events = %+v", fake.events)
 	}
 }
 
@@ -221,20 +221,20 @@ func TestOrderDetailsTranslatesAndAcks(t *testing.T) {
 		t.Errorf("orderAmount = %v", body.Item.Total.OrderAmount)
 	}
 	if len(body.Item.Items) != 1 || body.Item.Items[0].ExternalCode != "112" {
-		t.Errorf("itens = %+v", body.Item.Items)
+		t.Errorf("items = %+v", body.Item.Items)
 	}
 
 	fake.mu.Lock()
 	defer fake.mu.Unlock()
 	if len(fake.events) != 0 {
-		t.Errorf("eventos pendentes = %+v, quer nenhum depois do detalhe", fake.events)
+		t.Errorf("pending events = %+v, want none after details", fake.events)
 	}
 }
 
 func TestStatusConfirm(t *testing.T) {
 	server, fake := newTestBridge(t)
 
-	body := `{"status":"CONFIRMED","justification":"aceito no balcao"}`
+	body := `{"status":"CONFIRMED","justification":"accepted at the counter"}`
 	resp := doRequest(t, http.MethodPost, server.URL+"/v1/orders/order-1/status", "secret", body)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -248,24 +248,24 @@ func TestStatusConfirm(t *testing.T) {
 		t.Fatalf("confirms = %+v", fake.confirms)
 	}
 	confirm := fake.confirms[0]
-	if confirm["reason"] != "aceito no balcao" {
+	if confirm["reason"] != "accepted at the counter" {
 		t.Errorf("reason = %v", confirm["reason"])
 	}
 	if confirm["orderExternalCode"] != "661009" {
-		t.Errorf("orderExternalCode = %v, quer displayId", confirm["orderExternalCode"])
+		t.Errorf("orderExternalCode = %v, want displayId", confirm["orderExternalCode"])
 	}
 	if confirm["createdAt"] == "" {
-		t.Error("createdAt vazio")
+		t.Error("empty createdAt")
 	}
 	if len(fake.events) != 0 {
-		t.Errorf("eventos pendentes = %+v", fake.events)
+		t.Errorf("pending events = %+v", fake.events)
 	}
 }
 
 func TestStatusCancel(t *testing.T) {
 	server, fake := newTestBridge(t)
 
-	body := `{"orderId":"order-1","status":"CANCELLED","justification":"sem entregador"}`
+	body := `{"orderId":"order-1","status":"CANCELLED","justification":"no courier"}`
 	resp := doRequest(t, http.MethodPost, server.URL+"/v1/status", "secret", body)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -279,8 +279,8 @@ func TestStatusCancel(t *testing.T) {
 		t.Fatalf("cancellations = %+v", fake.cancellations)
 	}
 	cancel := fake.cancellations[0]
-	if cancel["reason"] != "sem entregador" || cancel["mode"] != "MANUAL" {
-		t.Errorf("cancelamento = %+v", cancel)
+	if cancel["reason"] != "no courier" || cancel["mode"] != "MANUAL" {
+		t.Errorf("cancellation = %+v", cancel)
 	}
 }
 
@@ -298,7 +298,7 @@ func TestStatusConcludedMapsToDelivered(t *testing.T) {
 	fake.mu.Lock()
 	defer fake.mu.Unlock()
 	if fake.delivered != 1 {
-		t.Errorf("delivered = %d, quer 1", fake.delivered)
+		t.Errorf("delivered = %d, want 1", fake.delivered)
 	}
 }
 
@@ -329,7 +329,7 @@ func TestUnsupportedStatus(t *testing.T) {
 	resp := doRequest(t, http.MethodPost, server.URL+"/v1/orders/order-1/status", "secret", body)
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("status = %d, quer 400", resp.StatusCode)
+		t.Fatalf("status = %d, want 400", resp.StatusCode)
 	}
 }
 
@@ -344,7 +344,7 @@ func TestStores(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(body.Items) != 1 || body.Items[0].ID != "store-1" || body.Items[0].Name != "Kareya" {
-		t.Errorf("lojas = %+v", body.Items)
+		t.Errorf("stores = %+v", body.Items)
 	}
 }
 

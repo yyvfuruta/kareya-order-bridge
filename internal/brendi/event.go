@@ -1,10 +1,10 @@
 package brendi
 
-// Event e um evento pendente retornado por GET /v1/events:polling.
+// Event is a pending event returned by GET /v1/events:polling.
 //
-// O padrao Open Delivery chama o identificador de "eventId", mas a Brendi
-// valida o acknowledgment com "id". Os dois campos sao aceitos e Key()
-// resolve qual usar.
+// The Open Delivery standard calls the identifier "eventId", but Brendi
+// validates the acknowledgment with "id". Both fields are accepted and Key()
+// resolves which one to use.
 type Event struct {
 	ID           string    `json:"id,omitempty"`
 	EventID      string    `json:"eventId,omitempty"`
@@ -16,7 +16,7 @@ type Event struct {
 	VirtualBrand string    `json:"virtualBrand,omitempty"`
 }
 
-// Key devolve o identificador do evento, seja ele "id" ou "eventId".
+// Key returns the event identifier, whether it is "id" or "eventId".
 func (e Event) Key() string {
 	if e.ID != "" {
 		return e.ID
@@ -24,14 +24,14 @@ func (e Event) Key() string {
 	return e.EventID
 }
 
-// AckEvent e o formato aceito por POST /v1/events/acknowledgment.
+// AckEvent is the format accepted by POST /v1/events/acknowledgment.
 type AckEvent struct {
 	ID        string    `json:"id"`
 	OrderID   string    `json:"orderId"`
 	EventType EventType `json:"eventType"`
 }
 
-// Ack converte o evento recebido no payload de confirmacao.
+// Ack converts the received event into the acknowledgment payload.
 func (e Event) Ack() AckEvent {
 	return AckEvent{ID: e.Key(), OrderID: e.OrderID, EventType: e.EventType}
 }

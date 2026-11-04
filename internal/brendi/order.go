@@ -1,8 +1,8 @@
 package brendi
 
-// Order e o pedido detalhado retornado por GET /v1/orders/{orderId}.
-// O formato segue o padrao Open Delivery (v1), usado pela API Publica da Brendi.
-// Campos com `omitempty` sao opcionais no schema; os demais sao obrigatorios.
+// Order is the detailed order returned by GET /v1/orders/{orderId}.
+// The format follows the Open Delivery (v1) standard used by Brendi's Public API.
+// Fields with `omitempty` are optional in the schema; the others are mandatory.
 type Order struct {
 	ID                       string        `json:"id"`
 	Type                     OrderType     `json:"type"`
@@ -36,19 +36,19 @@ type Order struct {
 	ExtraInfo                string        `json:"extraInfo,omitempty"`
 }
 
-// TotalAmount devolve o valor total do pedido.
+// TotalAmount returns the order total.
 func (o Order) TotalAmount() float64 { return o.Total.OrderAmount.Value }
 
-// IsDelivery informa se o pedido deve ser entregue no endereco do cliente.
+// IsDelivery reports whether the order must be delivered to the customer address.
 func (o Order) IsDelivery() bool { return o.Type == OrderTypeDelivery }
 
-// Merchant identifica a loja que recebeu o pedido.
+// Merchant identifies the store that received the order.
 type Merchant struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// OrderItem e uma linha do pedido (produto + complementos).
+// OrderItem is an order line (product + options).
 type OrderItem struct {
 	ID                  string       `json:"id"`
 	Index               int          `json:"index,omitempty"`
@@ -68,7 +68,7 @@ type OrderItem struct {
 	Options             []ItemOption `json:"options,omitempty"`
 }
 
-// ItemOption e um complemento/additional escolhido para um item.
+// ItemOption is an option/add-on chosen for an item.
 type ItemOption struct {
 	ID                  string   `json:"id"`
 	Index               int      `json:"index,omitempty"`
@@ -84,12 +84,12 @@ type ItemOption struct {
 	SpecialInstructions string   `json:"specialInstructions,omitempty"`
 }
 
-// ItemIndoor aponta o ponto de producao de um item consumido no salao.
+// ItemIndoor points to the production point of an item consumed in the dining room.
 type ItemIndoor struct {
 	ProductionPoint string `json:"productionPoint,omitempty"`
 }
 
-// OtherFee e uma taxa extra (entrega, servico, gorjeta, pedido minimo).
+// OtherFee is an extra fee (delivery, service, tip, minimum order).
 type OtherFee struct {
 	Name             string      `json:"name"`
 	Type             FeeType     `json:"type"`
@@ -99,7 +99,7 @@ type OtherFee struct {
 	Observation      string      `json:"observation,omitempty"`
 }
 
-// Discount e um desconto aplicado ao carrinho, a um item ou a taxa de entrega.
+// Discount is a discount applied to the cart, an item, or the delivery fee.
 type Discount struct {
 	Amount            Price                 `json:"amount"`
 	Target            DiscountTarget        `json:"target"`
@@ -107,14 +107,14 @@ type Discount struct {
 	SponsorshipValues []DiscountSponsorship `json:"sponsorshipValues"`
 }
 
-// DiscountSponsorship diz quem bancou o desconto.
+// DiscountSponsorship says who funded the discount.
 type DiscountSponsorship struct {
 	Name         SponsorshipName `json:"name"`
 	Amount       Price           `json:"amount"`
 	DiscountCode string          `json:"discountCode,omitempty"`
 }
 
-// OrderTotal resume os valores do pedido.
+// OrderTotal summarizes the order amounts.
 type OrderTotal struct {
 	ItemsPrice  Price `json:"itemsPrice"`
 	OtherFees   Price `json:"otherFees"`
@@ -122,14 +122,14 @@ type OrderTotal struct {
 	OrderAmount Price `json:"orderAmount"`
 }
 
-// Payments descreve o que ja foi pago e o que falta pagar.
+// Payments describes what was already paid and what is still pending.
 type Payments struct {
 	Prepaid float64   `json:"prepaid"`
 	Pending float64   `json:"pending"`
 	Methods []Payment `json:"methods"`
 }
 
-// Payment e uma forma de pagamento do pedido.
+// Payment is an order payment method.
 type Payment struct {
 	Value       float64             `json:"value"`
 	Currency    string              `json:"currency"`
@@ -141,19 +141,19 @@ type Payment struct {
 	ChangeFor   float64             `json:"changeFor,omitempty"`
 }
 
-// PaymentTransaction traz dados da transacao quando houver.
+// PaymentTransaction carries transaction data when available.
 type PaymentTransaction struct {
 	AuthorizationCode string `json:"authorizationCode,omitempty"`
 	AcquirerDocument  string `json:"acquirerDocument,omitempty"`
 }
 
-// TaxInvoice indica se a nota fiscal foi emitida.
+// TaxInvoice indicates whether the invoice was issued.
 type TaxInvoice struct {
 	Issued        bool   `json:"issued"`
 	TaxInvoiceURL string `json:"taxInvoiceURL,omitempty"`
 }
 
-// Customer e o cliente que fez o pedido.
+// Customer is the customer who placed the order.
 type Customer struct {
 	ID                    string        `json:"id"`
 	Name                  string        `json:"name"`
@@ -163,19 +163,19 @@ type Customer struct {
 	OrdersCountOnMerchant float64       `json:"ordersCountOnMerchant"`
 }
 
-// CustomerPhone e o telefone de contato do cliente.
+// CustomerPhone is the customer contact phone.
 type CustomerPhone struct {
 	Number    string `json:"number"`
 	Extension string `json:"extension,omitempty"`
 }
 
-// Schedule indica a janela de um pedido agendado.
+// Schedule indicates the window of a scheduled order.
 type Schedule struct {
 	ScheduledDateTimeStart DateTime `json:"scheduledDateTimeStart"`
 	ScheduledDateTimeEnd   DateTime `json:"scheduledDateTimeEnd"`
 }
 
-// Delivery agrupa os dados de entrega do pedido.
+// Delivery groups the order delivery data.
 type Delivery struct {
 	DeliveredBy               DeliveredBy     `json:"deliveredBy"`
 	DeliveryAddress           DeliveryAddress `json:"deliveryAddress"`
@@ -185,7 +185,7 @@ type Delivery struct {
 	PickupCode                string          `json:"pickupCode,omitempty"`
 }
 
-// DeliveryAddress e o endereco de entrega.
+// DeliveryAddress is the delivery address.
 type DeliveryAddress struct {
 	Country          string      `json:"country"`
 	State            string      `json:"state"`
@@ -200,20 +200,20 @@ type DeliveryAddress struct {
 	Coordinates      Coordinates `json:"coordinates"`
 }
 
-// Coordinates sao as coordenadas geograficas do endereco.
+// Coordinates are the address geographic coordinates.
 type Coordinates struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
 
-// Takeout agrupa os dados de retirada no balcao.
+// Takeout groups the counter pickup data.
 type Takeout struct {
 	Mode            TakeoutMode     `json:"mode"`
 	TakeoutDateTime DateTime        `json:"takeoutDateTime"`
 	BillingAddress  *BillingAddress `json:"billingAddress,omitempty"`
 }
 
-// BillingAddress e o endereco de cobranca (opcional no takeout).
+// BillingAddress is the billing address (optional for takeout).
 type BillingAddress struct {
 	Country    string `json:"country"`
 	State      string `json:"state"`
@@ -225,7 +225,7 @@ type BillingAddress struct {
 	Complement string `json:"complement,omitempty"`
 }
 
-// Indoor agrupa os dados de consumo no salao.
+// Indoor groups the dine-in data.
 type Indoor struct {
 	Mode           IndoorMode `json:"mode"`
 	IndoorDateTime DateTime   `json:"indoorDateTime"`

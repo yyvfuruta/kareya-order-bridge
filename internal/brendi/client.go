@@ -1,6 +1,6 @@
-// Package brendi e um cliente minimo da API de integracao da Brendi.
+// Package brendi is a minimal client for the Brendi integration API.
 //
-// Fluxo suportado:
+// Supported flow:
 //
 //	token (client_credentials) -> events:polling -> orders/:id -> events/acknowledgment
 package brendi
@@ -21,7 +21,7 @@ import (
 
 const defaultBaseURL = "https://api.brendi.com.br"
 
-// APIError representa uma resposta HTTP de erro da Brendi.
+// APIError represents a Brendi HTTP error response.
 type APIError struct {
 	Status int
 	Body   string
@@ -31,7 +31,7 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("brendi: HTTP %d: %s", e.Status, strings.TrimSpace(e.Body))
 }
 
-// Client fala com a API da Brendi e guarda o token em cache.
+// Client talks to the Brendi API and caches the access token.
 type Client struct {
 	BaseURL      string
 	ClientID     string
@@ -43,7 +43,7 @@ type Client struct {
 	tokenExp time.Time
 }
 
-// New cria um cliente. baseURL vazio usa https://api.brendi.com.br.
+// New creates a client. An empty baseURL uses https://api.brendi.com.br.
 func New(baseURL, clientID, clientSecret string) *Client {
 	if baseURL == "" {
 		baseURL = defaultBaseURL
@@ -62,7 +62,7 @@ type tokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-// Token devolve um access token valido, renovando quando faltam menos de 60s.
+// Token returns a valid access token, refreshing it when less than 60s remain.
 func (c *Client) Token(ctx context.Context) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -99,10 +99,10 @@ func (c *Client) Token(ctx context.Context) (string, error) {
 
 	var tr tokenResponse
 	if err := json.Unmarshal(body, &tr); err != nil {
-		return "", fmt.Errorf("brendi: token invalido: %w", err)
+		return "", fmt.Errorf("brendi: invalid token: %w", err)
 	}
 	if tr.AccessToken == "" {
-		return "", errors.New("brendi: resposta de token sem access_token")
+		return "", errors.New("brendi: token response without access_token")
 	}
 
 	c.token = tr.AccessToken
@@ -114,7 +114,7 @@ func (c *Client) Token(ctx context.Context) (string, error) {
 	return c.token, nil
 }
 
-// Poll busca os eventos pendentes. Retorna slice vazio quando a API responde 204.
+// Poll fetches pending events. Returns an empty slice when the API responds 204.
 func (c *Client) Poll(ctx context.Context) ([]Event, error) {
 	status, body, err := c.do(ctx, http.MethodGet, "/v1/events:polling", nil)
 	if err != nil {
@@ -129,12 +129,12 @@ func (c *Client) Poll(ctx context.Context) ([]Event, error) {
 
 	var events []Event
 	if err := json.Unmarshal(body, &events); err != nil {
-		return nil, fmt.Errorf("brendi: eventos invalidos: %w", err)
+		return nil, fmt.Errorf("brendi: invalid events: %w", err)
 	}
 	return events, nil
 }
 
-// OrderRaw busca os detalhes de um pedido e devolve o JSON cru.
+// OrderRaw fetches the order details and returns the raw JSON.
 func (c *Client) OrderRaw(ctx context.Context, orderID string) (json.RawMessage, error) {
 	status, body, err := c.do(ctx, http.MethodGet, "/v1/orders/"+url.PathEscape(orderID), nil)
 	if err != nil {
@@ -146,7 +146,7 @@ func (c *Client) OrderRaw(ctx context.Context, orderID string) (json.RawMessage,
 	return json.RawMessage(body), nil
 }
 
-// Order busca e decodifica os detalhes de um pedido.
+// Order fetches and decodes the order details.
 func (c *Client) Order(ctx context.Context, orderID string) (*Order, error) {
 	raw, err := c.OrderRaw(ctx, orderID)
 	if err != nil {
@@ -154,12 +154,12 @@ func (c *Client) Order(ctx context.Context, orderID string) (*Order, error) {
 	}
 	var order Order
 	if err := json.Unmarshal(raw, &order); err != nil {
-		return nil, fmt.Errorf("brendi: pedido invalido: %w", err)
+		return nil, fmt.Errorf("brendi: invalid order: %w", err)
 	}
 	return &order, nil
 }
 
-// Ack confirma que os eventos foram processados. Depois disso eles nao voltam no polling.
+// Ack acknowledges that the events were processed. They no longer show up in polling afterward.
 func (c *Client) Ack(ctx context.Context, events []Event) error {
 	acks := make([]AckEvent, len(events))
 	for i, event := range events {
@@ -181,7 +181,7 @@ func (c *Client) Ack(ctx context.Context, events []Event) error {
 	}
 }
 
-// Confirm confirma o recebimento do pedido na Brendi.
+// Confirm confirms order receipt in Brendi.
 func (c *Client) Confirm(ctx context.Context, orderID, reason, orderExternalCode string, preparationMinutes int) error {
 	payload := map[string]any{
 		"createdAt":         time.Now().UTC().Format(time.RFC3339),
@@ -196,25 +196,25 @@ func (c *Client) Confirm(ctx context.Context, orderID, reason, orderExternalCode
 	return c.postExpect(ctx, "/v1/orders/"+url.PathEscape(orderID)+"/confirm", payload)
 }
 
-// ReadyForPickup avisa que o pedido esta pronto para retirada.
+// ReadyForPickup tells Brendi the order is ready for pickup.
 func (c *Client) ReadyForPickup(ctx context.Context, orderID string) error {
 	return c.postExpect(ctx, "/v1/orders/"+url.PathEscape(orderID)+"/readyForPickup", map[string]any{})
 }
 
-// Dispatch avisa que o pedido saiu para entrega.
+// Dispatch tells Brendi the order is out for delivery.
 func (c *Client) Dispatch(ctx context.Context, orderID string) error {
 	return c.postExpect(ctx, "/v1/orders/"+url.PathEscape(orderID)+"/dispatch", map[string]any{})
 }
 
-// Delivered avisa que o pedido foi entregue/concluido.
+// Delivered tells Brendi the order was delivered/completed.
 func (c *Client) Delivered(ctx context.Context, orderID string) error {
 	return c.postExpect(ctx, "/v1/orders/"+url.PathEscape(orderID)+"/delivered", map[string]any{})
 }
 
-// RequestCancellation pede o cancelamento do pedido.
+// RequestCancellation requests order cancellation.
 func (c *Client) RequestCancellation(ctx context.Context, orderID, reason string) error {
 	if reason == "" {
-		reason = "Cancelado pelo restaurante no Consumer"
+		reason = "Cancelled by the restaurant in Consumer"
 	}
 	payload := map[string]any{
 		"reason": reason,
@@ -236,8 +236,8 @@ func (c *Client) postExpect(ctx context.Context, path string, payload any) error
 	switch status {
 	case http.StatusOK, http.StatusCreated, http.StatusAccepted, http.StatusNoContent:
 		return nil
-	// 409/422 normalmente significam "ja esta nesse estado"; nao adianta o
-	// Consumer repetir a chamada.
+	// 409/422 usually mean "already in this state"; there is no point in
+	// Consumer retrying the call.
 	case http.StatusConflict, http.StatusUnprocessableEntity:
 		return nil
 	default:

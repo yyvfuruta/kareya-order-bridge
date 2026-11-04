@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// DateTime aceita os formatos de data usados pela Brendi/Open Delivery sem
-// derrubar o parse do payload inteiro. O valor original fica em Raw.
+// DateTime accepts the date formats used by Brendi/Open Delivery without
+// breaking the parse of the whole payload. The original value is kept in Raw.
 type DateTime struct {
 	time.Time
 	Raw string
@@ -36,7 +36,7 @@ func (d *DateTime) UnmarshalJSON(data []byte) error {
 			return nil
 		}
 	}
-	// Formato desconhecido: preserva o texto e nao falha o pedido inteiro.
+	// Unknown format: keep the text and do not fail the whole order.
 	return nil
 }
 
@@ -60,16 +60,16 @@ func (d DateTime) String() string {
 	return d.Time.Format(time.RFC3339)
 }
 
-// Valid informa se a data foi reconhecida como um instante valido.
+// Valid reports whether the date was recognized as a valid instant.
 func (d DateTime) Valid() bool { return !d.Time.IsZero() }
 
-// Price e um valor monetario com moeda, como a API devolve.
+// Price is a monetary value with currency, as returned by the API.
 type Price struct {
 	Value    float64 `json:"value"`
 	Currency string  `json:"currency"`
 }
 
-// Enums do padrao Open Delivery, que a API da Brendi segue.
+// Enums from the Open Delivery standard followed by the Brendi API.
 
 type OrderType string
 

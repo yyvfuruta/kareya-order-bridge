@@ -1,5 +1,5 @@
 # --- Go ---
-# Binarios compilados
+# Compiled binaries
 *.exe
 *.exe~
 *.dll
@@ -11,30 +11,30 @@
 /dist/
 /build/
 
-# Cobertura e profiling
+# Coverage and profiling
 coverage.out
 coverage.html
 *.cover
 *.prof
 
-# Workspaces locais
+# Local workspaces
 go.work
 go.work.sum
 
-# --- Configuracao local / segredos ---
+# --- Local configuration / secrets ---
 .env
 .env.*
 !.env.example
 
-# --- Dados e estado local ---
-# Dumps de eventos/pedidos e qualquer estado do bridge
+# --- Local data and state ---
+# Event/order dumps and any bridge state
 var/
 state/
 data/
 tmp/
 *.log
 
-# --- Editores e SO ---
+# --- Editors and OS ---
 .idea/
 .vscode/
 *.swp

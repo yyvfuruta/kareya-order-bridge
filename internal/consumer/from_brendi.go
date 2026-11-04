@@ -8,15 +8,15 @@ import (
 	"kareya-order-bridge/internal/brendi"
 )
 
-// ProductMap traduz o codigo/nome do produto na Brendi para o codigo PDV
-// cadastrado no Consumer. A Brendi as vezes manda externalCode vazio (pedidos
-// de marketplace), por isso o fallback por nome.
+// ProductMap translates the Brendi product code/name into the PDV code
+// registered in Consumer. Brendi sometimes sends an empty externalCode
+// (marketplace orders), hence the name fallback.
 type ProductMap struct {
 	ByExternalCode map[string]string `json:"byExternalCode"`
 	ByName         map[string]string `json:"byName"`
 }
 
-// Lookup devolve o codigo PDV do produto.
+// Lookup returns the product PDV code.
 func (m ProductMap) Lookup(externalCode, name string) string {
 	if code := m.ByExternalCode[externalCode]; code != "" {
 		return code
@@ -27,7 +27,7 @@ func (m ProductMap) Lookup(externalCode, name string) string {
 	return externalCode
 }
 
-// FromBrendi converte o pedido da Brendi para o formato do Consumer.
+// FromBrendi converts a Brendi order into the Consumer format.
 func FromBrendi(o *brendi.Order, products ProductMap) Order {
 	out := Order{
 		ID:                       o.ID,
@@ -237,7 +237,7 @@ func round2(v float64) float64 {
 	return float64(int64(v*100+0.5)) / 100
 }
 
-// deterministicID gera um UUID estavel para itens sem id na origem.
+// deterministicID builds a stable UUID for items without an id at the source.
 func deterministicID(namespace string, parts ...string) string {
 	h := sha1.Sum([]byte(strings.Join(append([]string{namespace}, parts...), "\x00")))
 	b := h[:16]

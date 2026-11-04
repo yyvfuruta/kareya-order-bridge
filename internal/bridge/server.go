@@ -1,5 +1,5 @@
-// Package bridge expoe a API do parceiro que o Consumer consome, traduzindo
-// os pedidos da Brendi e repassando as mudancas de status.
+// Package bridge exposes the partner API consumed by Consumer, translating
+// Brendi orders and forwarding status changes.
 package bridge
 
 import (
@@ -18,33 +18,33 @@ import (
 	"kareya-order-bridge/internal/consumer"
 )
 
-// Config e a configuracao do servidor.
+// Config is the server configuration.
 type Config struct {
-	// Token que o Consumer envia em toda requisicao.
+	// Token sent by Consumer on every request.
 	Token string
-	// Version aparece no /healthz (injetada no build).
+	// Version is shown by /healthz (injected at build time).
 	Version string
-	// StoreID/StoreName aparecem no endpoint de listagem de lojas.
+	// StoreID/StoreName are returned by the store listing endpoint.
 	StoreID   string
 	StoreName string
-	// Products traduz item da Brendi para o codigo PDV do Consumer.
+	// Products maps a Brendi item to the Consumer PDV code.
 	Products consumer.ProductMap
-	// AckOnDetails confirma o evento na Brendi depois de entregar os detalhes.
+	// AckOnDetails acknowledges the Brendi event after delivering the details.
 	AckOnDetails bool
-	// PollAllEvents reenvia qualquer evento como PLACED, nao so CREATED.
+	// PollAllEvents forwards every event as PLACED, not only CREATED.
 	PollAllEvents bool
-	// LogHeaders loga os headers das requisicoes nao autenticadas (debug).
+	// LogHeaders logs headers of unauthenticated requests (debug).
 	LogHeaders bool
 }
 
-// Server implementa os endpoints do parceiro.
+// Server implements the partner endpoints.
 type Server struct {
 	cfg    Config
 	brendi *brendi.Client
 	log    *slog.Logger
 }
 
-// New cria o servidor.
+// New creates the server.
 func New(cfg Config, client *brendi.Client, log *slog.Logger) *Server {
 	if log == nil {
 		log = slog.Default()
@@ -52,7 +52,7 @@ func New(cfg Config, client *brendi.Client, log *slog.Logger) *Server {
 	return &Server{cfg: cfg, brendi: client, log: log}
 }
 
-// Handler devolve o http.Handler com as rotas.
+// Handler returns the http.Handler with the routes.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
@@ -65,14 +65,14 @@ func (s *Server) Handler() http.Handler {
 	})
 
 	mux.Handle("GET /v1/events:polling", s.auth(http.HandlerFunc(s.handlePolling)))
-	// Algumas versoes do Consumer chamam esse campo de "URL de eventos" e
-	// apontam para /v1/events; tratamos como o mesmo polling.
+	// Some Consumer versions call this field "events URL" and point it to
+	// /v1/events; treat it as the same polling endpoint.
 	mux.Handle("GET /v1/events", s.auth(http.HandlerFunc(s.handlePolling)))
 	mux.Handle("GET /v1/events/{eventID}", s.auth(http.HandlerFunc(s.handleEvent)))
 	mux.Handle("GET /v1/orders/{orderID}", s.auth(http.HandlerFunc(s.handleOrder)))
 	mux.Handle("POST /v1/orders/{orderID}/status", s.auth(http.HandlerFunc(s.handleStatus)))
-	// O manual fala em orderId/status como path parameters, mas o exemplo
-	// manda tudo no corpo. Aceitamos as duas formas.
+	// The manual describes orderId/status as path parameters, but the example
+	// sends everything in the body. Accept both forms.
 	mux.Handle("POST /v1/orders/{orderID}/status/{status}", s.auth(http.HandlerFunc(s.handleStatus)))
 	mux.Handle("POST /v1/status", s.auth(http.HandlerFunc(s.handleStatus)))
 	mux.Handle("POST /v1/status/{orderID}", s.auth(http.HandlerFunc(s.handleStatus)))
@@ -97,8 +97,8 @@ func (s *Server) handlePolling(w http.ResponseWriter, r *http.Request) {
 			ignored = append(ignored, event)
 			continue
 		}
-		// O Consumer so entende pedido novo. Os demais eventos sao
-		// confirmados para nao voltarem eternamente no polling.
+		// Consumer only understands new orders. Other events are acknowledged
+		// so they do not keep coming back on every poll.
 		if event.EventType != brendi.EventCreated && !s.cfg.PollAllEvents {
 			ignored = append(ignored, event)
 			continue
@@ -114,7 +114,7 @@ func (s *Server) handlePolling(w http.ResponseWriter, r *http.Request) {
 
 	if len(ignored) > 0 {
 		if err := s.brendi.Ack(r.Context(), ignored); err != nil {
-			s.log.Warn("falha ao confirmar eventos ignorados", "err", err)
+			s.log.Warn("failed to acknowledge ignored events", "err", err)
 		}
 	}
 
@@ -144,7 +144,7 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	s.failMsg(w, http.StatusNotFound, "evento nao encontrado")
+	s.failMsg(w, http.StatusNotFound, "event not found")
 }
 
 func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +158,7 @@ func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request) {
 
 	var order brendi.Order
 	if err := json.Unmarshal(raw, &order); err != nil {
-		s.fail(w, http.StatusBadGateway, fmt.Errorf("pedido invalido: %w", err))
+		s.fail(w, http.StatusBadGateway, fmt.Errorf("invalid order: %w", err))
 		return
 	}
 
@@ -167,8 +167,8 @@ func (s *Server) handleOrder(w http.ResponseWriter, r *http.Request) {
 		StatusCode: 0,
 	})
 
-	// Ack depois de entregar os detalhes: se o Consumer nunca chegar aqui,
-	// o evento continua na fila da Brendi.
+	// Ack after delivering the details: if Consumer never gets here, the
+	// event stays in the Brendi queue.
 	if s.cfg.AckOnDetails {
 		s.ackOrder(orderID)
 	}
@@ -178,7 +178,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	var req consumer.StatusRequest
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
 	if err := dec.Decode(&req); err != nil && !errors.Is(err, io.EOF) {
-		s.failMsg(w, http.StatusBadRequest, "corpo invalido: "+err.Error())
+		s.failMsg(w, http.StatusBadRequest, "invalid body: "+err.Error())
 		return
 	}
 
@@ -190,11 +190,11 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		orderID = r.URL.Query().Get("orderId")
 	}
 	if orderID == "" {
-		s.failMsg(w, http.StatusBadRequest, "orderId obrigatorio")
+		s.failMsg(w, http.StatusBadRequest, "orderId is required")
 		return
 	}
 
-	// O status pode vir no corpo, no path ou na query.
+	// The status may come in the body, path, or query string.
 	if req.Status == "" {
 		req.Status = r.PathValue("status")
 	}
@@ -225,7 +225,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	case "CONCLUDED", "DELIVERED", "FINISHED":
 		err = s.brendi.Delivered(ctx, orderID)
 	default:
-		s.failMsg(w, http.StatusBadRequest, "status nao suportado: "+req.Status)
+		s.failMsg(w, http.StatusBadRequest, "unsupported status: "+req.Status)
 		return
 	}
 
@@ -236,7 +236,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	s.ackOrder(orderID)
 
-	msg := fmt.Sprintf("%s alterado para %q", orderID, status)
+	msg := fmt.Sprintf("%s changed to %q", orderID, status)
 	if req.Justification != "" {
 		msg += ": " + req.Justification
 	}
@@ -250,14 +250,14 @@ func (s *Server) handleStores(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-// ackOrder confirma na Brendi todos os eventos pendentes do pedido.
+// ackOrder acknowledges all pending events of the order in Brendi.
 func (s *Server) ackOrder(orderID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	events, err := s.brendi.Poll(ctx)
 	if err != nil {
-		s.log.Warn("ack: polling falhou", "orderId", orderID, "err", err)
+		s.log.Warn("ack: polling failed", "orderId", orderID, "err", err)
 		return
 	}
 
@@ -271,10 +271,10 @@ func (s *Server) ackOrder(orderID string) {
 		return
 	}
 	if err := s.brendi.Ack(ctx, pending); err != nil {
-		s.log.Warn("ack: acknowledgment falhou", "orderId", orderID, "err", err)
+		s.log.Warn("ack: acknowledgment failed", "orderId", orderID, "err", err)
 		return
 	}
-	s.log.Info("eventos confirmados na Brendi", "orderId", orderID, "count", len(pending))
+	s.log.Info("events acknowledged in Brendi", "orderId", orderID, "count", len(pending))
 }
 
 func (s *Server) auth(next http.Handler) http.Handler {
@@ -287,8 +287,8 @@ func (s *Server) auth(next http.Handler) http.Handler {
 		if s.cfg.LogHeaders {
 			attrs = append(attrs, "headers", r.Header)
 		}
-		s.log.Warn("token invalido", attrs...)
-		s.failMsg(w, http.StatusUnauthorized, "token invalido")
+		s.log.Warn("invalid token", attrs...)
+		s.failMsg(w, http.StatusUnauthorized, "invalid token")
 	})
 }
 
@@ -347,7 +347,7 @@ func (s *Server) fail(w http.ResponseWriter, status int, err error) {
 	if errors.As(err, &apiErr) && apiErr.Status == http.StatusNotFound {
 		status = http.StatusNotFound
 	}
-	s.log.Error("erro no proxy", "status", status, "err", err)
+	s.log.Error("proxy error", "status", status, "err", err)
 	s.failMsg(w, status, err.Error())
 }
 

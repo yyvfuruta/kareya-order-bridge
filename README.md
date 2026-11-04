@@ -40,7 +40,7 @@ X-Api-Key: <BRIDGE_TOKEN>
 ```
 
 Se o token não bater, o bridge responde `401` com
-`{"statusCode":401,"reasonPhrase":"token invalido"}` e registra a tentativa no
+`{"statusCode":401,"reasonPhrase":"invalid token"}` e registra a tentativa no
 log (ative `BRIDGE_LOG_HEADERS=true` para ver os headers e descobrir o formato
 que a versão do Consumer do cliente usa).
 
@@ -297,8 +297,8 @@ O repositório tem dois workflows:
 Para lançar uma versão:
 
 ```bash
-git tag -a v0.0.0 -m "versao inicial"
-git push origin v0.0.0
+git tag -a v0.1.0 -m "minor release: JSON logs and English messages"
+git push origin v0.1.0
 ```
 
 Artefatos gerados: `linux/amd64`, `linux/arm64`, `windows/amd64`,

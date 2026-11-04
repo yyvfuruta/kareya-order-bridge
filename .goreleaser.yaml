@@ -56,17 +56,17 @@ changelog:
     - title: Features
       regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
       order: 0
-    - title: Correcoes
+    - title: Fixes
       regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
       order: 1
-    - title: Outros
+    - title: Other
       order: 999
 
 release:
   draft: false
   prerelease: auto
   header: |
-    Binarios do bridge Brendi -> Consumer.
+    Brendi -> Consumer bridge binaries.
 
-    No Windows, baixe o `.zip` de `windows_amd64`, extraia `bridge.exe` e siga
-    a secao "Instalar no Windows" do README.
+    On Windows, download the `windows_amd64` `.zip`, extract `bridge.exe`, and
+    follow the "Instalar no Windows" section of the README.
