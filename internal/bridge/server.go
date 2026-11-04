@@ -22,6 +22,8 @@ import (
 type Config struct {
 	// Token que o Consumer envia em toda requisicao.
 	Token string
+	// Version aparece no /healthz (injetada no build).
+	Version string
 	// StoreID/StoreName aparecem no endpoint de listagem de lojas.
 	StoreID   string
 	StoreName string
@@ -55,7 +57,11 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		payload := map[string]string{"status": "ok"}
+		if s.cfg.Version != "" {
+			payload["version"] = s.cfg.Version
+		}
+		writeJSON(w, http.StatusOK, payload)
 	})
 
 	mux.Handle("GET /v1/events:polling", s.auth(http.HandlerFunc(s.handlePolling)))

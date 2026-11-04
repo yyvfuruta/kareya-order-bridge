@@ -43,6 +43,9 @@ import (
 	"kareya-order-bridge/internal/consumer"
 )
 
+// version e injetada pelo GoReleaser via -X main.version=...
+var version = "dev"
+
 func main() {
 	envFile, baseDir := findEnvFile()
 	if err := loadEnv(envFile); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -79,6 +82,7 @@ func main() {
 
 	cfg := bridge.Config{
 		Token:         token,
+		Version:       version,
 		StoreID:       storeID,
 		StoreName:     os.Getenv("BRIDGE_STORE_NAME"),
 		Products:      products,
@@ -115,7 +119,7 @@ func main() {
 	defer stop()
 
 	go func() {
-		logger.Info("bridge no ar", "addr", httpServer.Addr, "storeId", storeID)
+		logger.Info("bridge no ar", "version", version, "addr", httpServer.Addr, "storeId", storeID)
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			fatal("servidor HTTP: " + err.Error())
 		}
