@@ -1,0 +1,108 @@
+{
+  "id": "ababf637-6a62-4922-8c1a-4b774072d930",
+  "type": "DELIVERY",
+  "displayId": "661009",
+  "sourceOrderId": "5764698747867040555",
+  "sourceAppId": "10dd7c11-e326-4d24-b0ed-619639b365de",
+  "salesChannel": "BRENDI_99FOOD",
+  "virtualBrand": "5764608498831459661",
+  "createdAt": "2026-11-04T20:28:29.000Z",
+  "lastEvent": "DELIVERED",
+  "orderTiming": "INSTANT",
+  "preparationStartDateTime": "2026-11-04T20:28:29.000Z",
+  "merchant": {
+    "id": "3b65546b-ffa7-4419-9d1a-23e43fd14382",
+    "name": "Loja Teste"
+  },
+  "items": [
+    {
+      "id": "",
+      "name": "Donburi katsudon",
+      "externalCode": "",
+      "unit": "UN",
+      "quantity": 1,
+      "originalPrice": { "value": 37.03, "currency": "BRL" },
+      "unitPrice": { "value": 37.03, "currency": "BRL" },
+      "optionsPrice": { "value": 0, "currency": "BRL" },
+      "subtotalPrice": { "value": 37.03, "currency": "BRL" },
+      "totalPrice": { "value": 37.03, "currency": "BRL" },
+      "index": 0,
+      "specialInstructions": "",
+      "options": []
+    }
+  ],
+  "otherFees": [
+    {
+      "type": "DELIVERY_FEE",
+      "name": "Taxa de entrega",
+      "receivedBy": "MERCHANT",
+      "price": { "value": 4.49, "currency": "BRL" }
+    },
+    {
+      "type": "SERVICE_FEE",
+      "name": "Taxa de serviço",
+      "receivedBy": "MARKETPLACE",
+      "price": { "value": 1.86, "currency": "BRL" }
+    }
+  ],
+  "discounts": [
+    {
+      "amount": { "value": 4.49, "currency": "BRL" },
+      "target": "DELIVERY_FEE",
+      "sponsorshipValues": [
+        {
+          "name": "MERCHANT",
+          "amount": { "value": 4.49, "currency": "BRL" },
+          "discountCode": "FREE_DELIVERY"
+        }
+      ]
+    }
+  ],
+  "total": {
+    "itemsPrice": { "value": 37.03, "currency": "BRL" },
+    "otherFees": { "value": 6.35, "currency": "BRL" },
+    "discount": { "value": 4.49, "currency": "BRL" },
+    "orderAmount": { "value": 38.89, "currency": "BRL" }
+  },
+  "payments": {
+    "prepaid": 38.89,
+    "pending": 0,
+    "methods": [
+      {
+        "currency": "BRL",
+        "type": "PREPAID",
+        "method": "PIX",
+        "value": 38.89
+      }
+    ]
+  },
+  "customer": {
+    "id": "45988931-c442-4bb6-8e0f-4ad996adb1d6",
+    "name": "Cliente Teste",
+    "phone": { "number": "5511999999999" },
+    "ordersCountOnMerchant": 0
+  },
+  "delivery": {
+    "deliveryDateTime": "2026-11-04T20:52:15.370Z",
+    "deliveryFee": { "value": 4.49, "currency": "BRL" },
+    "deliveredBy": "MERCHANT",
+    "deliveryAddress": {
+      "street": "Rua Teste",
+      "number": "123",
+      "formattedAddress": "Rua Teste, 123",
+      "district": "Centro",
+      "complement": "",
+      "postalCode": "80000-000",
+      "city": "Curitiba",
+      "state": "PR",
+      "reference": "",
+      "country": "BR",
+      "coordinates": { "latitude": -25.4, "longitude": -49.2 }
+    },
+    "estimatedDeliveryDateTime": "2026-11-04T21:00:29.000Z"
+  },
+  "sendPreparing": true,
+  "sendDelivered": true,
+  "sendPickedUp": false,
+  "sendTracking": true
+}

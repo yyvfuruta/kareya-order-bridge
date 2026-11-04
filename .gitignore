@@ -1,0 +1,44 @@
+# --- Go ---
+# Binarios compilados
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/dist/
+/build/
+
+# Cobertura e profiling
+coverage.out
+coverage.html
+*.cover
+*.prof
+
+# Workspaces locais
+go.work
+go.work.sum
+
+# --- Configuracao local / segredos ---
+.env
+.env.*
+!.env.example
+
+# --- Dados e estado local ---
+# Dumps de eventos/pedidos e qualquer estado do bridge
+var/
+state/
+data/
+tmp/
+*.log
+
+# --- Editores e SO ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

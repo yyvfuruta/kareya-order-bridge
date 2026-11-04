@@ -1,0 +1,11 @@
+[
+  {
+    "eventId": "87d0384a-a52a-4d6f-9523-448a22d99831",
+    "eventType": "DELIVERED",
+    "orderId": "ababf637-6a62-4922-8c1a-4b774072d930",
+    "orderURL": "https://api.brendi.com.br/v1/orders/ababf637-6a62-4922-8c1a-4b774072d930",
+    "createdAt": "2026-11-04T20:52:15.232Z",
+    "sourceAppId": "10dd7c11-e326-4d24-b0ed-619639b365de",
+    "virtualBrand": "5764608498831459661"
+  }
+]
