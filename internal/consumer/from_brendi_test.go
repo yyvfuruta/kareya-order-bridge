@@ -123,3 +123,17 @@ func TestProductMapPrefersExternalCode(t *testing.T) {
 		t.Errorf("lookup sem mapa = %q, quer vazio", got)
 	}
 }
+
+func TestPaymentCardBrand(t *testing.T) {
+	order := loadOrder(t)
+	order.Payments.Methods[0].Brand = "VISA"
+
+	got := FromBrendi(order, ProductMap{})
+	card := got.Payments.Methods[0].Card
+	if card == nil {
+		t.Fatal("card nil")
+	}
+	if card.Brand != "VISA" {
+		t.Errorf("card.brand = %q, quer VISA", card.Brand)
+	}
+}

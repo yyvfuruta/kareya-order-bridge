@@ -302,6 +302,26 @@ func TestStatusConcludedMapsToDelivered(t *testing.T) {
 	}
 }
 
+func TestStatusViaPathParameters(t *testing.T) {
+	server, fake := newTestBridge(t)
+
+	resp := doRequest(t, http.MethodPost, server.URL+"/v1/orders/order-1/status/CONFIRMED?justification=ok", "secret")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d: %s", resp.StatusCode, raw)
+	}
+
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	if len(fake.confirms) != 1 {
+		t.Fatalf("confirms = %+v", fake.confirms)
+	}
+	if fake.confirms[0]["reason"] != "ok" {
+		t.Errorf("reason = %v", fake.confirms[0]["reason"])
+	}
+}
+
 func TestUnsupportedStatus(t *testing.T) {
 	server, _ := newTestBridge(t)
 

@@ -61,11 +61,10 @@ func FromBrendi(o *brendi.Order, products ProductMap) Order {
 
 	if o.Delivery != nil {
 		out.Delivery = &Delivery{
-			Mode:                      "DEFAULT",
-			DeliveredBy:               string(o.Delivery.DeliveredBy),
-			PickupCode:                o.Delivery.PickupCode,
-			DeliveryDateTime:          firstValid(o.Delivery.DeliveryDateTime, o.Delivery.EstimatedDeliveryDateTime),
-			EstimatedDeliveryDateTime: o.Delivery.EstimatedDeliveryDateTime.String(),
+			Mode:             "DEFAULT",
+			DeliveredBy:      string(o.Delivery.DeliveredBy),
+			PickupCode:       o.Delivery.PickupCode,
+			DeliveryDateTime: firstValid(o.Delivery.DeliveryDateTime, o.Delivery.EstimatedDeliveryDateTime),
 			DeliveryAddress: Address{
 				Country:          o.Delivery.DeliveryAddress.Country,
 				State:            o.Delivery.DeliveryAddress.State,
@@ -196,6 +195,9 @@ func payments(p brendi.Payments) Payments {
 				AuthorizationCode: m.Transaction.AuthorizationCode,
 				AcquirerDocument:  m.Transaction.AcquirerDocument,
 			}
+		}
+		if m.Brand != "" {
+			payment.Card = &Card{Brand: string(m.Brand)}
 		}
 		out.Methods = append(out.Methods, payment)
 	}

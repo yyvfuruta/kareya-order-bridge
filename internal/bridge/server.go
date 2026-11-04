@@ -65,7 +65,12 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /v1/events/{eventID}", s.auth(http.HandlerFunc(s.handleEvent)))
 	mux.Handle("GET /v1/orders/{orderID}", s.auth(http.HandlerFunc(s.handleOrder)))
 	mux.Handle("POST /v1/orders/{orderID}/status", s.auth(http.HandlerFunc(s.handleStatus)))
+	// O manual fala em orderId/status como path parameters, mas o exemplo
+	// manda tudo no corpo. Aceitamos as duas formas.
+	mux.Handle("POST /v1/orders/{orderID}/status/{status}", s.auth(http.HandlerFunc(s.handleStatus)))
 	mux.Handle("POST /v1/status", s.auth(http.HandlerFunc(s.handleStatus)))
+	mux.Handle("POST /v1/status/{orderID}", s.auth(http.HandlerFunc(s.handleStatus)))
+	mux.Handle("POST /v1/status/{orderID}/{status}", s.auth(http.HandlerFunc(s.handleStatus)))
 	mux.Handle("GET /v1/stores", s.auth(http.HandlerFunc(s.handleStores)))
 
 	return s.logRequests(mux)
@@ -176,8 +181,22 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		orderID = req.OrderID
 	}
 	if orderID == "" {
+		orderID = r.URL.Query().Get("orderId")
+	}
+	if orderID == "" {
 		s.failMsg(w, http.StatusBadRequest, "orderId obrigatorio")
 		return
+	}
+
+	// O status pode vir no corpo, no path ou na query.
+	if req.Status == "" {
+		req.Status = r.PathValue("status")
+	}
+	if req.Status == "" {
+		req.Status = r.URL.Query().Get("status")
+	}
+	if req.Justification == "" {
+		req.Justification = r.URL.Query().Get("justification")
 	}
 
 	ctx := r.Context()

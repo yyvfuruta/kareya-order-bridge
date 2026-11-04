@@ -64,7 +64,7 @@ type Order struct {
 	ID                       string    `json:"id"`
 	DisplayID                string    `json:"displayId"`
 	OrderType                string    `json:"orderType"`
-	SalesChannel             string    `json:"salesChannel,omitempty"`
+	SalesChannel             string    `json:"salesChannel"`
 	OrderTiming              string    `json:"orderTiming"`
 	CreatedAt                string    `json:"createdAt"`
 	PreparationStartDateTime string    `json:"preparationStartDateTime"`
@@ -151,8 +151,14 @@ type Payment struct {
 	Method      string       `json:"method"`
 	Brand       string       `json:"brand,omitempty"`
 	MethodInfo  string       `json:"methodInfo,omitempty"`
+	Card        *Card        `json:"card,omitempty"`
 	Transaction *Transaction `json:"transaction,omitempty"`
 	ChangeFor   float64      `json:"changeFor,omitempty"`
+}
+
+// Card traz a bandeira do cartao (o Consumer le em payments.methods.card.brand).
+type Card struct {
+	Brand string `json:"brand"`
 }
 
 // Transaction traz dados de autorizacao do cartao.
@@ -175,18 +181,17 @@ type Customer struct {
 type Phone struct {
 	Number              string `json:"number"`
 	Extension           string `json:"extension,omitempty"`
-	Localizer           string `json:"localizer,omitempty"`
-	LocalizerExpiration string `json:"localizerExpiration,omitempty"`
+	Localizer           string `json:"localizer"`
+	LocalizerExpiration string `json:"localizerExpiration"`
 }
 
 // Delivery agrupa os dados de entrega.
 type Delivery struct {
-	Mode                      string  `json:"mode"`
-	DeliveredBy               string  `json:"deliveredBy"`
-	PickupCode                string  `json:"pickupCode,omitempty"`
-	DeliveryDateTime          string  `json:"deliveryDateTime,omitempty"`
-	EstimatedDeliveryDateTime string  `json:"estimatedDeliveryDateTime,omitempty"`
-	DeliveryAddress           Address `json:"deliveryAddress"`
+	Mode             string  `json:"mode"`
+	DeliveredBy      string  `json:"deliveredBy"`
+	PickupCode       string  `json:"pickupCode"`
+	DeliveryDateTime string  `json:"deliveryDateTime"`
+	DeliveryAddress  Address `json:"deliveryAddress"`
 }
 
 // Address e o endereco de entrega no formato do Consumer.
