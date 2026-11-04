@@ -1,0 +1,72 @@
+version: 2
+
+project_name: kareya-order-bridge
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: bridge
+    main: ./cmd/bridge
+    binary: bridge
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: bridge
+    ids:
+      - bridge
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - .env.example
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Correcoes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Outros
+      order: 999
+
+release:
+  draft: false
+  prerelease: auto
+  header: |
+    Binarios do bridge Brendi -> Consumer.
+
+    No Windows, baixe o `.zip` de `windows_amd64`, extraia `bridge.exe` e siga
+    a secao "Instalar no Windows" do README.
