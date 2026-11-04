@@ -5,6 +5,8 @@
 // Variaveis de ambiente (ou .env.local):
 //
 //	PORT                    porta HTTP (padrao 8080)
+//	BRIDGE_HOST             interface de escuta (padrao 127.0.0.1, so local)
+//	BRIDGE_LOG_FILE         arquivo de log opcional (append; sem rotacao)
 //	BRIDGE_TOKEN            token exigido do Consumer (obrigatorio)
 //	BRIDGE_STORE_ID         id da loja na listagem (padrao: BRENDI_CLIENT_ID)
 //	BRIDGE_STORE_NAME       nome da loja na listagem
@@ -19,14 +21,18 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -38,12 +44,16 @@ import (
 )
 
 func main() {
-	if err := loadEnv(".env.local"); err != nil && !errors.Is(err, os.ErrNotExist) {
-		fmt.Fprintf(os.Stderr, "erro lendo .env.local: %v\n", err)
+	envFile, baseDir := findEnvFile()
+	if err := loadEnv(envFile); err != nil && !errors.Is(err, os.ErrNotExist) {
+		fmt.Fprintf(os.Stderr, "erro lendo %s: %v\n", envFile, err)
 		os.Exit(2)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	logger, logFile := setupLogger()
+	if logFile != nil {
+		defer logFile.Close()
+	}
 	slog.SetDefault(logger)
 
 	clientID := os.Getenv("BRENDI_CLIENT_ID")
@@ -57,7 +67,7 @@ func main() {
 		fatal("defina BRIDGE_TOKEN (token que o Consumer vai enviar)")
 	}
 
-	products, err := loadProducts(os.Getenv("BRIDGE_PRODUCT_MAP"))
+	products, err := loadProducts(resolvePath(os.Getenv("BRIDGE_PRODUCT_MAP"), baseDir))
 	if err != nil {
 		fatal("erro lendo BRIDGE_PRODUCT_MAP: " + err.Error())
 	}
@@ -85,8 +95,15 @@ func main() {
 		port = "8080"
 	}
 
+	// Por padrao escuta so em localhost: o Consumer roda na mesma maquina.
+	// Para expor na rede, defina BRIDGE_HOST=0.0.0.0 (e cuide do firewall).
+	host := os.Getenv("BRIDGE_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
 	httpServer := &http.Server{
-		Addr:              ":" + port,
+		Addr:              net.JoinHostPort(host, port),
 		Handler:           server.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
@@ -114,6 +131,45 @@ func main() {
 	}
 }
 
+// findEnvFile procura .env.local ao lado do executavel (importante quando roda
+// como servico do Windows, que pode iniciar em outro diretorio) e cai para o
+// diretorio atual.
+func findEnvFile() (string, string) {
+	if exe, err := os.Executable(); err == nil {
+		dir := filepath.Dir(exe)
+		candidate := filepath.Join(dir, ".env.local")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, dir
+		}
+	}
+	return ".env.local", "."
+}
+
+// resolvePath resolve caminhos relativos a partir do diretorio do .env.local.
+func resolvePath(path, baseDir string) string {
+	if path == "" || filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(baseDir, path)
+}
+
+// setupLogger escreve no stdout e, se BRIDGE_LOG_FILE estiver definido, tambem
+// no arquivo (append, sem rotacao).
+func setupLogger() (*slog.Logger, *os.File) {
+	opts := &slog.HandlerOptions{Level: slog.LevelInfo}
+
+	path := strings.TrimSpace(os.Getenv("BRIDGE_LOG_FILE"))
+	if path == "" {
+		return slog.New(slog.NewTextHandler(os.Stdout, opts)), nil
+	}
+
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		fatal("erro abrindo BRIDGE_LOG_FILE: " + err.Error())
+	}
+	return slog.New(slog.NewTextHandler(io.MultiWriter(os.Stdout, file), opts)), file
+}
+
 func loadProducts(path string) (consumer.ProductMap, error) {
 	if path == "" {
 		return consumer.ProductMap{}, nil
@@ -122,6 +178,8 @@ func loadProducts(path string) (consumer.ProductMap, error) {
 	if err != nil {
 		return consumer.ProductMap{}, err
 	}
+	// Arquivo salvo no Windows pode vir com BOM.
+	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
 	var products consumer.ProductMap
 	if err := json.Unmarshal(data, &products); err != nil {
 		return consumer.ProductMap{}, err
@@ -155,8 +213,15 @@ func loadEnv(path string) error {
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
+	firstLine := true
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		line := scanner.Text()
+		if firstLine {
+			// Notepad pode salvar como UTF-8 com BOM.
+			line = strings.TrimPrefix(line, "\ufeff")
+			firstLine = false
+		}
+		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
