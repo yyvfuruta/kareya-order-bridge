@@ -18,7 +18,7 @@ Todos exigem token, exceto `/healthz`.
 
 | Método | Rota | O que faz |
 | --- | --- | --- |
-| GET | `/healthz` | Health check (sem token). |
+| GET | `/healthz` | Health check (sem token), mostra a versão injetada no build. |
 | GET | `/v1/events:polling` | Polling de pedidos novos. Traduz `CREATED` → `PLACED` (`PLC`). |
 | GET | `/v1/events/{eventId}` | Consulta um evento pelo id. |
 | GET | `/v1/orders/{orderId}` | Detalhes do pedido no formato do Consumer. |
@@ -281,6 +281,34 @@ WantedBy=multi-user.target
 Nesse caso, use `BRIDGE_HOST=0.0.0.0`, coloque um reverse proxy (Caddy/Nginx) na
 frente para terminar o TLS e cadastre no Consumer as URLs públicas
 `https://bridge.exemplo.com/...`.
+
+## Releases (GitHub Actions)
+
+O repositório tem dois workflows:
+
+- **ci** (`push` na `main` e pull requests): `gofmt`, `go vet`, `go test -race`
+  e um build cruzado para Windows.
+- **release** (`push` de tag `v*`): o GoReleaser compila e publica os binários
+  na release do GitHub.
+
+Para lançar uma versão:
+
+```bash
+git tag -a v0.0.0 -m "versao inicial"
+git push origin v0.0.0
+```
+
+Artefatos gerados: `linux/amd64`, `linux/arm64`, `windows/amd64`,
+`windows/arm64`, `darwin/amd64`, `darwin/arm64` e `checksums.txt`. No Windows o
+pacote é `.zip` com `bridge.exe`; nos demais, `.tar.gz`. A versão da tag aparece
+no `/healthz` e no log de inicialização.
+
+Para validar o GoReleaser localmente antes de taguear:
+
+```bash
+goreleaser check
+goreleaser release --snapshot --clean
+```
 
 ## Limitações conhecidas
 
