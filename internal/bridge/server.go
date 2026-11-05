@@ -103,12 +103,17 @@ func (s *Server) handlePolling(w http.ResponseWriter, r *http.Request) {
 			ignored = append(ignored, event)
 			continue
 		}
+		createdAt := event.CreatedAt.ISO8601()
+		if createdAt == "" {
+			createdAt = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+		}
 		items = append(items, consumer.PollingEvent{
-			ID:        event.Key(),
-			OrderID:   event.OrderID,
-			CreatedAt: event.CreatedAt.String(),
-			FullCode:  "PLACED",
-			Code:      "PLC",
+			ID:         event.Key(),
+			OrderID:    event.OrderID,
+			CreatedAt:  createdAt,
+			FullCode:   "PLACED",
+			Code:       "PLC",
+			StatusCode: 0,
 		})
 	}
 
@@ -132,13 +137,18 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		if event.Key() != eventID {
 			continue
 		}
+		createdAt := event.CreatedAt.ISO8601()
+		if createdAt == "" {
+			createdAt = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+		}
 		writeJSON(w, http.StatusOK, consumer.EventResponse{
 			Item: consumer.PollingEvent{
-				ID:        event.Key(),
-				OrderID:   event.OrderID,
-				CreatedAt: event.CreatedAt.String(),
-				FullCode:  "PLACED",
-				Code:      "PLC",
+				ID:         event.Key(),
+				OrderID:    event.OrderID,
+				CreatedAt:  createdAt,
+				FullCode:   "PLACED",
+				Code:       "PLC",
+				StatusCode: 0,
 			},
 			StatusCode: 0,
 		})
@@ -218,11 +228,11 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		err = s.brendi.Confirm(ctx, orderID, req.Justification, externalCode, 0)
 	case "CANCELLED", "CANCELED":
 		err = s.brendi.RequestCancellation(ctx, orderID, req.Justification)
-	case "READY_FOR_PICKUP":
+	case "READY_FOR_PICKUP", "READYTOPICKUP", "READY_TO_PICKUP":
 		err = s.brendi.ReadyForPickup(ctx, orderID)
-	case "DISPATCHED":
+	case "DISPATCHED", "DISPATCH":
 		err = s.brendi.Dispatch(ctx, orderID)
-	case "CONCLUDED", "DELIVERED", "FINISHED":
+	case "CONCLUDED", "DELIVERED", "FINISHED", "FINALIZED":
 		err = s.brendi.Delivered(ctx, orderID)
 	default:
 		s.failMsg(w, http.StatusBadRequest, "unsupported status: "+req.Status)

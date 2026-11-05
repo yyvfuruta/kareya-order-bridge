@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"strings"
+	"time"
 
 	"kareya-order-bridge/internal/brendi"
 )
@@ -29,14 +30,29 @@ func (m ProductMap) Lookup(externalCode, name string) string {
 
 // FromBrendi converts a Brendi order into the Consumer format.
 func FromBrendi(o *brendi.Order, products ProductMap) Order {
+	salesChannel := o.SalesChannel
+	if salesChannel == "" {
+		salesChannel = "PARTNER"
+	}
+
+	createdAt := o.CreatedAt.ISO8601()
+	if createdAt == "" {
+		createdAt = time.Now().UTC().Format("2006-01-02T15:04:05.000Z")
+	}
+
+	prepStart := o.PreparationStartDateTime.ISO8601()
+	if prepStart == "" {
+		prepStart = createdAt
+	}
+
 	out := Order{
 		ID:                       o.ID,
 		DisplayID:                o.DisplayID,
 		OrderType:                string(o.Type),
-		SalesChannel:             o.SalesChannel,
+		SalesChannel:             salesChannel,
 		OrderTiming:              timing(o.OrderTiming),
-		CreatedAt:                o.CreatedAt.String(),
-		PreparationStartDateTime: o.PreparationStartDateTime.String(),
+		CreatedAt:                createdAt,
+		PreparationStartDateTime: prepStart,
 		Merchant:                 Merchant{ID: o.Merchant.ID, Name: o.Merchant.Name},
 		Items:                    items(o, products),
 		Benefits:                 benefits(o.Discounts),
@@ -46,27 +62,58 @@ func FromBrendi(o *brendi.Order, products ProductMap) Order {
 	}
 
 	if o.Customer != nil {
-		out.Customer = &Customer{
-			ID:                    o.Customer.ID,
-			Name:                  o.Customer.Name,
-			DocumentNumber:        o.Customer.DocumentNumber,
-			Email:                 o.Customer.Email,
-			OrdersCountOnMerchant: o.Customer.OrdersCountOnMerchant,
+		cust := &Customer{
+			ID:   o.Customer.ID,
+			Name: o.Customer.Name,
 			Phone: Phone{
 				Number:    o.Customer.Phone.Number,
 				Extension: o.Customer.Phone.Extension,
 			},
 		}
+		if o.Customer.DocumentNumber != "" {
+			cust.DocumentNumber = &o.Customer.DocumentNumber
+		}
+		if o.Customer.OrdersCountOnMerchant > 0 {
+			cust.OrdersCountOnMerchant = &o.Customer.OrdersCountOnMerchant
+		}
+		if o.Customer.Phone.Localizer != "" {
+			cust.Phone.Localizer = &o.Customer.Phone.Localizer
+		}
+		if exp := o.Customer.Phone.LocalizerExpiration.ISO8601(); exp != "" {
+			cust.Phone.LocalizerExpiration = &exp
+		}
+		out.Customer = cust
+	} else {
+		out.Customer = &Customer{
+			ID:   deterministicID(o.ID, "customer"),
+			Name: "Cliente",
+			Phone: Phone{
+				Number: "N/D",
+			},
+		}
 	}
 
 	if o.Delivery != nil {
+		country := o.Delivery.DeliveryAddress.Country
+		if country == "" {
+			country = "BR"
+		}
+		pickupCode := o.Delivery.PickupCode
+		if pickupCode == "" {
+			pickupCode = "N/D"
+		}
+		deliveryDT := firstValid(o.Delivery.DeliveryDateTime, o.Delivery.EstimatedDeliveryDateTime)
+		if deliveryDT == "" {
+			deliveryDT = createdAt
+		}
+
 		out.Delivery = &Delivery{
 			Mode:             "DEFAULT",
 			DeliveredBy:      string(o.Delivery.DeliveredBy),
-			PickupCode:       o.Delivery.PickupCode,
-			DeliveryDateTime: firstValid(o.Delivery.DeliveryDateTime, o.Delivery.EstimatedDeliveryDateTime),
+			PickupCode:       pickupCode,
+			DeliveryDateTime: deliveryDT,
 			DeliveryAddress: Address{
-				Country:          o.Delivery.DeliveryAddress.Country,
+				Country:          country,
 				State:            o.Delivery.DeliveryAddress.State,
 				City:             o.Delivery.DeliveryAddress.City,
 				PostalCode:       o.Delivery.DeliveryAddress.PostalCode,
@@ -87,14 +134,14 @@ func FromBrendi(o *brendi.Order, products ProductMap) Order {
 	if o.Takeout != nil {
 		out.Takeout = &Takeout{
 			Mode:            string(o.Takeout.Mode),
-			TakeoutDateTime: o.Takeout.TakeoutDateTime.String(),
+			TakeoutDateTime: o.Takeout.TakeoutDateTime.ISO8601(),
 		}
 	}
 
 	if o.Indoor != nil {
 		out.Indoor = &Indoor{
 			Mode:           string(o.Indoor.Mode),
-			IndoorDateTime: o.Indoor.IndoorDateTime.String(),
+			IndoorDateTime: o.Indoor.IndoorDateTime.ISO8601(),
 			Place:          o.Indoor.Place,
 			Tab:            o.Indoor.Tab,
 			Seat:           o.Indoor.Seat,
@@ -134,19 +181,36 @@ func items(o *brendi.Order, products ProductMap) []Item {
 				Quantity:     option.Quantity,
 				UnitPrice:    option.UnitPrice.Value,
 				Price:        option.TotalPrice.Value,
-				Index:        j,
+				Index:        j + 1,
 			})
+		}
+
+		unitPrice := item.UnitPrice.Value
+		totalPrice := item.TotalPrice.Value
+		if totalPrice == 0 && unitPrice > 0 {
+			totalPrice = unitPrice * item.Quantity
+		}
+
+		idx := item.Index
+		if idx == 0 {
+			idx = i + 1
+		}
+
+		unit := string(item.Unit)
+		if unit == "" {
+			unit = "UN"
 		}
 
 		out = append(out, Item{
 			ID:           id,
-			Index:        item.Index,
+			Index:        idx,
 			Name:         item.Name,
 			ExternalCode: products.Lookup(item.ExternalCode, item.Name),
-			Unit:         string(item.Unit),
+			Unit:         unit,
 			Quantity:     item.Quantity,
-			UnitPrice:    item.UnitPrice.Value,
-			TotalPrice:   item.TotalPrice.Value,
+			UnitPrice:    unitPrice,
+			TotalPrice:   totalPrice,
+			Price:        totalPrice,
 			Observations: item.SpecialInstructions,
 			Options:      options,
 		})
@@ -181,10 +245,17 @@ func deliveryFee(o *brendi.Order) float64 {
 func payments(p brendi.Payments) Payments {
 	out := Payments{Prepaid: p.Prepaid, Pending: p.Pending, Methods: make([]Payment, 0, len(p.Methods))}
 	for _, m := range p.Methods {
+		pType := paymentType(m.Type, m.Prepaid, p.Prepaid > 0)
+		isPrepaid := pType == "ONLINE"
+		currency := m.Currency
+		if currency == "" {
+			currency = "BRL"
+		}
 		payment := Payment{
 			Value:      m.Value,
-			Currency:   m.Currency,
-			Type:       string(m.Type),
+			Currency:   currency,
+			Type:       pType,
+			Prepaid:    isPrepaid,
 			Method:     string(m.Method),
 			Brand:      string(m.Brand),
 			MethodInfo: m.MethodInfo,
@@ -199,9 +270,26 @@ func payments(p brendi.Payments) Payments {
 		if m.Brand != "" {
 			payment.Card = &Card{Brand: string(m.Brand)}
 		}
+		if m.ChangeFor > 0 {
+			payment.Cash = &Cash{ChangeFor: m.ChangeFor}
+		}
 		out.Methods = append(out.Methods, payment)
 	}
 	return out
+}
+
+func paymentType(t brendi.PaymentType, methodPrepaid bool, orderHasPrepaid bool) string {
+	switch strings.ToUpper(string(t)) {
+	case "ONLINE", "PREPAID":
+		return "ONLINE"
+	case "OFFLINE", "PENDING":
+		return "OFFLINE"
+	default:
+		if methodPrepaid || orderHasPrepaid {
+			return "ONLINE"
+		}
+		return "OFFLINE"
+	}
 }
 
 func benefits(discounts []brendi.Discount) []Benefit {
@@ -226,7 +314,7 @@ func benefits(discounts []brendi.Discount) []Benefit {
 
 func firstValid(values ...brendi.DateTime) string {
 	for _, v := range values {
-		if s := v.String(); s != "" {
+		if s := v.ISO8601(); s != "" {
 			return s
 		}
 	}

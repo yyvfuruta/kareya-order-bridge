@@ -135,6 +135,7 @@ type Payment struct {
 	Currency    string              `json:"currency"`
 	Type        PaymentType         `json:"type"`
 	Method      PaymentMethod       `json:"method"`
+	Prepaid     bool                `json:"prepaid,omitempty"`
 	Brand       PaymentBrand        `json:"brand,omitempty"`
 	MethodInfo  string              `json:"methodInfo,omitempty"`
 	Transaction *PaymentTransaction `json:"transaction,omitempty"`
@@ -165,8 +166,10 @@ type Customer struct {
 
 // CustomerPhone is the customer contact phone.
 type CustomerPhone struct {
-	Number    string `json:"number"`
-	Extension string `json:"extension,omitempty"`
+	Number              string   `json:"number"`
+	Extension           string   `json:"extension,omitempty"`
+	Localizer           string   `json:"localizer,omitempty"`
+	LocalizerExpiration DateTime `json:"localizerExpiration,omitempty"`
 }
 
 // Schedule indicates the window of a scheduled order.

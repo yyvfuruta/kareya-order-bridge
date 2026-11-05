@@ -11,11 +11,12 @@ type PollingResponse struct {
 
 // PollingEvent is a new-order event.
 type PollingEvent struct {
-	ID        string `json:"id"`
-	OrderID   string `json:"orderId"`
-	CreatedAt string `json:"createdAt"`
-	FullCode  string `json:"fullCode"`
-	Code      string `json:"code"`
+	ID         string `json:"id"`
+	OrderID    string `json:"orderId"`
+	CreatedAt  string `json:"createdAt"`
+	FullCode   string `json:"fullCode"`
+	Code       string `json:"code"`
+	StatusCode int    `json:"statusCode"`
 }
 
 // OrderResponse is the body returned by the order details endpoint.
@@ -95,6 +96,7 @@ type Item struct {
 	Quantity         float64  `json:"quantity"`
 	UnitPrice        float64  `json:"unitPrice"`
 	TotalPrice       float64  `json:"totalPrice"`
+	Price            float64  `json:"price,omitempty"`
 	Observations     string   `json:"observations,omitempty"`
 	ImageURL         string   `json:"imageUrl,omitempty"`
 	Options          []Option `json:"options,omitempty"`
@@ -148,9 +150,11 @@ type Payment struct {
 	Currency    string       `json:"currency"`
 	Type        string       `json:"type"`
 	Method      string       `json:"method"`
+	Prepaid     bool         `json:"prepaid"`
 	Brand       string       `json:"brand,omitempty"`
 	MethodInfo  string       `json:"methodInfo,omitempty"`
 	Card        *Card        `json:"card,omitempty"`
+	Cash        *Cash        `json:"cash,omitempty"`
 	Transaction *Transaction `json:"transaction,omitempty"`
 	ChangeFor   float64      `json:"changeFor,omitempty"`
 }
@@ -158,6 +162,11 @@ type Payment struct {
 // Card carries the card brand (Consumer reads it from payments.methods.card.brand).
 type Card struct {
 	Brand string `json:"brand"`
+}
+
+// Cash carries cash payment details (Consumer reads it from payments.methods.cash.changeFor).
+type Cash struct {
+	ChangeFor float64 `json:"changeFor"`
 }
 
 // Transaction carries card authorization data.
@@ -168,20 +177,20 @@ type Transaction struct {
 
 // Customer is the order customer.
 type Customer struct {
-	ID                    string  `json:"id"`
-	Name                  string  `json:"name"`
-	DocumentNumber        string  `json:"documentNumber,omitempty"`
-	Phone                 Phone   `json:"phone"`
-	Email                 string  `json:"email,omitempty"`
-	OrdersCountOnMerchant float64 `json:"ordersCountOnMerchant"`
+	ID                    string   `json:"id"`
+	Name                  string   `json:"name"`
+	DocumentNumber        *string  `json:"documentNumber,omitempty"`
+	Phone                 Phone    `json:"phone"`
+	Email                 string   `json:"email,omitempty"`
+	OrdersCountOnMerchant *float64 `json:"ordersCountOnMerchant,omitempty"`
 }
 
 // Phone is the contact phone.
 type Phone struct {
-	Number              string `json:"number"`
-	Extension           string `json:"extension,omitempty"`
-	Localizer           string `json:"localizer"`
-	LocalizerExpiration string `json:"localizerExpiration"`
+	Number              string  `json:"number"`
+	Extension           string  `json:"extension,omitempty"`
+	Localizer           *string `json:"localizer,omitempty"`
+	LocalizerExpiration *string `json:"localizerExpiration,omitempty"`
 }
 
 // Delivery groups the delivery data.

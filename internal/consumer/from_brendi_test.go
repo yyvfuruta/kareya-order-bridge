@@ -137,3 +137,73 @@ func TestPaymentCardBrand(t *testing.T) {
 		t.Errorf("card.brand = %q, want VISA", card.Brand)
 	}
 }
+
+func TestFromBrendiPaymentTypesAndJSONStructure(t *testing.T) {
+	order := loadOrder(t)
+	order.Payments.Methods = []brendi.Payment{
+		{
+			Value:    20.0,
+			Currency: "BRL",
+			Type:     brendi.PaymentTypePrepaid,
+			Method:   "CREDIT",
+		},
+		{
+			Value:     18.89,
+			Currency:  "BRL",
+			Type:      brendi.PaymentTypePending,
+			Method:    "CASH",
+			ChangeFor: 50.0,
+		},
+	}
+
+	got := FromBrendi(order, ProductMap{})
+
+	if len(got.Payments.Methods) != 2 {
+		t.Fatalf("methods = %d, want 2", len(got.Payments.Methods))
+	}
+	if got.Payments.Methods[0].Type != "ONLINE" || !got.Payments.Methods[0].Prepaid {
+		t.Errorf("method[0]: type=%q prepaid=%v, want ONLINE/true", got.Payments.Methods[0].Type, got.Payments.Methods[0].Prepaid)
+	}
+	if got.Payments.Methods[1].Type != "OFFLINE" || got.Payments.Methods[1].Prepaid {
+		t.Errorf("method[1]: type=%q prepaid=%v, want OFFLINE/false", got.Payments.Methods[1].Type, got.Payments.Methods[1].Prepaid)
+	}
+	if got.Payments.Methods[1].Cash == nil || got.Payments.Methods[1].Cash.ChangeFor != 50.0 {
+		t.Errorf("cash changeFor = %+v", got.Payments.Methods[1].Cash)
+	}
+
+	// Verify JSON output
+	raw, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var data map[string]any
+	if err := json.Unmarshal(raw, &data); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+
+	totalMap, ok := data["total"].(map[string]any)
+	if !ok {
+		t.Fatalf("total not a map: %v", data["total"])
+	}
+	if _, ok := totalMap["subTotal"]; !ok {
+		t.Errorf("subTotal key missing in total: %+v", totalMap)
+	}
+	if _, hasBad := totalMap["sub Total"]; hasBad {
+		t.Errorf("bad 'sub Total' key found in total: %+v", totalMap)
+	}
+
+	custMap, ok := data["customer"].(map[string]any)
+	if !ok {
+		t.Fatalf("customer not a map: %v", data["customer"])
+	}
+	phoneMap, ok := custMap["phone"].(map[string]any)
+	if !ok {
+		t.Fatalf("phone not a map: %v", custMap["phone"])
+	}
+	if v, exists := phoneMap["localizer"]; exists && v == "" {
+		t.Errorf("localizer must not be empty string: %v", v)
+	}
+	if v, exists := phoneMap["localizerExpiration"]; exists && v == "" {
+		t.Errorf("localizerExpiration must not be empty string: %v", v)
+	}
+}

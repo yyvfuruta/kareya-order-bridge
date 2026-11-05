@@ -188,6 +188,12 @@ func TestPollingOnlyForwardsCreated(t *testing.T) {
 	if body.Items[0].Code != "PLC" || body.Items[0].FullCode != "PLACED" {
 		t.Errorf("code = %q/%q", body.Items[0].Code, body.Items[0].FullCode)
 	}
+	if body.Items[0].StatusCode != 0 {
+		t.Errorf("item.statusCode = %d, want 0", body.Items[0].StatusCode)
+	}
+	if !strings.HasSuffix(body.Items[0].CreatedAt, "Z") {
+		t.Errorf("item.createdAt = %q, want UTC ISO8601 ending in Z", body.Items[0].CreatedAt)
+	}
 	if body.StatusCode != 0 {
 		t.Errorf("statusCode = %d", body.StatusCode)
 	}

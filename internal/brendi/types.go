@@ -41,23 +41,33 @@ func (d *DateTime) UnmarshalJSON(data []byte) error {
 }
 
 func (d DateTime) MarshalJSON() ([]byte, error) {
+	if !d.Time.IsZero() {
+		return json.Marshal(d.Time.UTC().Format("2006-01-02T15:04:05.000Z"))
+	}
 	if d.Raw != "" {
 		return json.Marshal(d.Raw)
 	}
-	if d.Time.IsZero() {
-		return []byte("null"), nil
-	}
-	return json.Marshal(d.Time.Format(time.RFC3339Nano))
+	return []byte("null"), nil
 }
 
 func (d DateTime) String() string {
+	return d.ISO8601()
+}
+
+// ISO8601 returns the date in UTC ISO8601 format (e.g. "2024-08-21T16:36:23.000Z").
+func (d DateTime) ISO8601() string {
+	if !d.Time.IsZero() {
+		return d.Time.UTC().Format("2006-01-02T15:04:05.000Z")
+	}
 	if d.Raw != "" {
+		for _, layout := range dateLayouts {
+			if t, err := time.Parse(layout, d.Raw); err == nil {
+				return t.UTC().Format("2006-01-02T15:04:05.000Z")
+			}
+		}
 		return d.Raw
 	}
-	if d.Time.IsZero() {
-		return ""
-	}
-	return d.Time.Format(time.RFC3339)
+	return ""
 }
 
 // Valid reports whether the date was recognized as a valid instant.
