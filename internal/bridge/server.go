@@ -307,9 +307,18 @@ func (s *Server) tokenOK(r *http.Request) bool {
 			candidates = append(candidates, strings.TrimSpace(auth))
 		}
 	}
-	for _, header := range []string{"X-Api-Key", "Api-Key", "X-Token", "Token"} {
+	for _, header := range []string{
+		"X-Api-Key", "Api-Key", "X-Token", "Token",
+		"Xapikey", "X-Apikey", "Apikey", "X-Access-Token",
+	} {
 		if value := r.Header.Get(header); value != "" {
 			candidates = append(candidates, value)
+		}
+	}
+	for k, values := range r.Header {
+		norm := strings.ToLower(strings.ReplaceAll(k, "-", ""))
+		if norm == "xapikey" || norm == "apikey" || norm == "xtoken" || norm == "token" || norm == "xaccesstoken" {
+			candidates = append(candidates, values...)
 		}
 	}
 	query := r.URL.Query()

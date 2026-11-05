@@ -138,6 +138,8 @@ func TestAuth(t *testing.T) {
 		{"wrong token", func(r *http.Request) { r.Header.Set("Authorization", "Bearer nope") }, http.StatusUnauthorized},
 		{"bearer", func(r *http.Request) { r.Header.Set("Authorization", "Bearer secret") }, http.StatusOK},
 		{"api key", func(r *http.Request) { r.Header.Set("X-Api-Key", "secret") }, http.StatusOK},
+		{"consumer xapikey", func(r *http.Request) { r.Header.Set("Xapikey", "secret") }, http.StatusOK},
+		{"lowercase xapikey", func(r *http.Request) { r.Header["xapikey"] = []string{"secret"} }, http.StatusOK},
 		{"query", func(*http.Request) {}, http.StatusOK},
 	}
 

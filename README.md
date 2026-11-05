@@ -35,6 +35,7 @@ O Consumer manda o token em qualquer um destes formatos (o bridge aceita todos):
 ```
 Authorization: Bearer <BRIDGE_TOKEN>
 X-Api-Key: <BRIDGE_TOKEN>
+Xapikey: <BRIDGE_TOKEN>
 ?token=<BRIDGE_TOKEN>
 ?access_token=<BRIDGE_TOKEN>
 ```
