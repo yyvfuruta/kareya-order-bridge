@@ -124,6 +124,60 @@ func TestProductMapPrefersExternalCode(t *testing.T) {
 	}
 }
 
+func TestOptionIDsInJSON(t *testing.T) {
+	order := loadOrder(t)
+	sourceID := "67a3158b-54ca-4f88-b69a-bef78b82ac70"
+	order.Items[0].Options = []brendi.ItemOption{
+		{ID: sourceID, Name: "Molho", Quantity: 1},
+		{Name: "Enviar hashi", Quantity: 1},
+		{Name: "Enviar hashi", Quantity: 1},
+	}
+	secondItem := order.Items[0]
+	order.Items = append(order.Items, secondItem)
+
+	first := FromBrendi(order, ProductMap{})
+	retry := FromBrendi(order, ProductMap{})
+	if first.Items[0].Options[0].ID != sourceID {
+		t.Fatal("source option id was not preserved")
+	}
+	seen := map[string]bool{}
+	for i, item := range first.Items {
+		for j, option := range item.Options {
+			if option.ID == "" {
+				t.Fatalf("item %d option %d has no id", i, j)
+			}
+			if option.ID != retry.Items[i].Options[j].ID {
+				t.Fatalf("item %d option %d id changed on retry", i, j)
+			}
+			if j > 0 {
+				if seen[option.ID] {
+					t.Fatalf("generated option id is not unique: %s", option.ID)
+				}
+				seen[option.ID] = true
+			}
+		}
+	}
+	raw, err := json.Marshal(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Items []struct {
+			Options []map[string]any `json:"options"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	for i, item := range payload.Items {
+		for j, option := range item.Options {
+			if id, ok := option["id"].(string); !ok || id == "" {
+				t.Fatalf("item %d option %d JSON lacks a nonempty string id", i, j)
+			}
+		}
+	}
+}
+
 func TestPaymentCardBrand(t *testing.T) {
 	order := loadOrder(t)
 	order.Payments.Methods[0].Brand = "VISA"

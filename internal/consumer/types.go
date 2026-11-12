@@ -105,6 +105,7 @@ type Item struct {
 
 // Option is an item modifier.
 type Option struct {
+	ID           string  `json:"id"`
 	Name         string  `json:"name"`
 	ExternalCode string  `json:"externalCode,omitempty"`
 	Quantity     float64 `json:"quantity"`

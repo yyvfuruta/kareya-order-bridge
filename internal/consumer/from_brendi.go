@@ -175,7 +175,12 @@ func items(o *brendi.Order, products ProductMap) []Item {
 
 		options := make([]Option, 0, len(item.Options))
 		for j, option := range item.Options {
+			optionID := option.ID
+			if optionID == "" {
+				optionID = deterministicID(o.ID, "item", fmt.Sprint(i), "option", fmt.Sprint(j))
+			}
 			options = append(options, Option{
+				ID:           optionID,
 				Name:         option.Name,
 				ExternalCode: products.Lookup(option.ExternalCode, option.Name),
 				Quantity:     option.Quantity,
@@ -325,7 +330,7 @@ func round2(v float64) float64 {
 	return float64(int64(v*100+0.5)) / 100
 }
 
-// deterministicID builds a stable UUID for items without an id at the source.
+// deterministicID builds a stable UUID for records without an id at the source.
 func deterministicID(namespace string, parts ...string) string {
 	h := sha1.Sum([]byte(strings.Join(append([]string{namespace}, parts...), "\x00")))
 	b := h[:16]
