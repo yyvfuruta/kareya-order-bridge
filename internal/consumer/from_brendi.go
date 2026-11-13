@@ -14,9 +14,10 @@ import (
 // registered in Consumer. Brendi sometimes sends an empty externalCode
 // (marketplace orders), hence the name fallback.
 type ProductMap struct {
-	ByExternalCode        map[string]string `json:"byExternalCode"`
-	ByName                map[string]string `json:"byName"`
-	OptionsAsObservations []string          `json:"optionsAsObservations,omitempty"`
+	ByExternalCode        map[string]string     `json:"byExternalCode"`
+	ByName                map[string]string     `json:"byName"`
+	OptionsAsObservations []string              `json:"optionsAsObservations,omitempty"`
+	BySalesChannel        map[string]ProductMap `json:"bySalesChannel,omitempty"`
 }
 
 // Lookup returns the product PDV code.
@@ -32,6 +33,10 @@ func (m ProductMap) Lookup(externalCode, name string) string {
 
 // FromBrendi converts a Brendi order into the Consumer format.
 func FromBrendi(o *brendi.Order, products ProductMap) Order {
+	// A channel-specific map replaces the default map only for that channel.
+	if channelMap, ok := products.BySalesChannel[o.SalesChannel]; ok {
+		products = channelMap
+	}
 	salesChannel := o.SalesChannel
 	if salesChannel == "" {
 		salesChannel = "PARTNER"

@@ -131,6 +131,22 @@ O mapa é compartilhado entre produtos e complementos. Se um nome existir nos do
 cadastros com códigos PDV diferentes, deixe esse nome fora de `byName` e use
 `byExternalCode` para códigos de origem distintos, quando disponíveis.
 
+A partir da versão 0.1.5, `bySalesChannel` permite configurar um mapa exclusivo
+para um canal. O mapa do canal substitui o mapa padrão inteiro, incluindo a lista
+`optionsAsObservations`. Os outros canais continuam usando o mapa padrão:
+
+```json
+{
+  "byName": { "Nome usado pelos outros canais": "112" },
+  "bySalesChannel": {
+    "BRENDI_99FOOD": {
+      "byName": { "Nome usado na 99Food": "112" },
+      "optionsAsObservations": ["Enviar hashi"]
+    }
+  }
+}
+```
+
 ## Rodar local
 
 ```bash

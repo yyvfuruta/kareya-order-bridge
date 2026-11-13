@@ -3,6 +3,7 @@ package consumer
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"testing"
 
 	"kareya-order-bridge/internal/brendi"
@@ -144,6 +145,44 @@ func TestCustomerIDFallback(t *testing.T) {
 			}
 			if order.Customer.ID != sourceID {
 				t.Fatal("source customer was mutated")
+			}
+		})
+	}
+}
+
+func TestChannelMapKeepsOtherChannelsUnchanged(t *testing.T) {
+	baseline := ProductMap{ByName: map[string]string{"Donburi katsudon": "112"}}
+	scoped := ProductMap{
+		ByName: baseline.ByName,
+		BySalesChannel: map[string]ProductMap{
+			"BRENDI_99FOOD": {
+				ByName:                map[string]string{"Donburi katsudon": "999"},
+				OptionsAsObservations: []string{"Enviar hashi"},
+			},
+		},
+	}
+	for _, channel := range []string{"BRENDI_IFOOD", "BRENDI_MENU", "BRENDI_99FOOD"} {
+		t.Run(channel, func(t *testing.T) {
+			order := loadOrder(t)
+			order.SalesChannel = channel
+			order.Items[0].Options = []brendi.ItemOption{
+				{Name: "Enviar hashi", Quantity: 1},
+				{Name: "Forte", ExternalCode: "4", Quantity: 1},
+			}
+			before := FromBrendi(order, baseline)
+			after := FromBrendi(order, scoped)
+			if channel != "BRENDI_99FOOD" {
+				if !reflect.DeepEqual(before, after) {
+					t.Fatal("99Food configuration changed another channel's order")
+				}
+				return
+			}
+			item := after.Items[0]
+			if item.ExternalCode != "999" || item.Observations != "1x Enviar hashi" {
+				t.Fatalf("99Food map was not applied: %+v", item)
+			}
+			if len(item.Options) != 1 || item.Options[0].ExternalCode != "4" || item.Options[0].ID == "" {
+				t.Fatalf("coded option changed: %+v", item.Options)
 			}
 		})
 	}
