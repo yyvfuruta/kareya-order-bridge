@@ -3,6 +3,7 @@ package consumer
 import (
 	"crypto/sha1"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -13,8 +14,9 @@ import (
 // registered in Consumer. Brendi sometimes sends an empty externalCode
 // (marketplace orders), hence the name fallback.
 type ProductMap struct {
-	ByExternalCode map[string]string `json:"byExternalCode"`
-	ByName         map[string]string `json:"byName"`
+	ByExternalCode        map[string]string `json:"byExternalCode"`
+	ByName                map[string]string `json:"byName"`
+	OptionsAsObservations []string          `json:"optionsAsObservations,omitempty"`
 }
 
 // Lookup returns the product PDV code.
@@ -69,6 +71,9 @@ func FromBrendi(o *brendi.Order, products ProductMap) Order {
 				Number:    o.Customer.Phone.Number,
 				Extension: o.Customer.Phone.Extension,
 			},
+		}
+		if strings.TrimSpace(cust.ID) == "" {
+			cust.ID = deterministicID(o.ID, "customer")
 		}
 		if o.Customer.DocumentNumber != "" {
 			cust.DocumentNumber = &o.Customer.DocumentNumber
@@ -173,8 +178,22 @@ func items(o *brendi.Order, products ProductMap) []Item {
 			id = deterministicID(o.ID, "item", fmt.Sprint(i))
 		}
 
+		observations := item.SpecialInstructions
 		options := make([]Option, 0, len(item.Options))
 		for j, option := range item.Options {
+			externalCode := products.Lookup(option.ExternalCode, option.Name)
+			if externalCode == "" && option.UnitPrice.Value == 0 && option.TotalPrice.Value == 0 &&
+				option.Quantity > 0 && slices.Contains(products.OptionsAsObservations, option.Name) {
+				text := fmt.Sprintf("%gx %s", option.Quantity, option.Name)
+				if option.SpecialInstructions != "" {
+					text += " (" + option.SpecialInstructions + ")"
+				}
+				if observations != "" {
+					observations += "\n"
+				}
+				observations += text
+				continue
+			}
 			optionID := option.ID
 			if optionID == "" {
 				optionID = deterministicID(o.ID, "item", fmt.Sprint(i), "option", fmt.Sprint(j))
@@ -182,7 +201,7 @@ func items(o *brendi.Order, products ProductMap) []Item {
 			options = append(options, Option{
 				ID:           optionID,
 				Name:         option.Name,
-				ExternalCode: products.Lookup(option.ExternalCode, option.Name),
+				ExternalCode: externalCode,
 				Quantity:     option.Quantity,
 				UnitPrice:    option.UnitPrice.Value,
 				Price:        option.TotalPrice.Value,
@@ -196,11 +215,6 @@ func items(o *brendi.Order, products ProductMap) []Item {
 			totalPrice = unitPrice * item.Quantity
 		}
 
-		idx := item.Index
-		if idx == 0 {
-			idx = i + 1
-		}
-
 		unit := string(item.Unit)
 		if unit == "" {
 			unit = "UN"
@@ -208,7 +222,7 @@ func items(o *brendi.Order, products ProductMap) []Item {
 
 		out = append(out, Item{
 			ID:           id,
-			Index:        idx,
+			Index:        i + 1,
 			Name:         item.Name,
 			ExternalCode: products.Lookup(item.ExternalCode, item.Name),
 			Unit:         unit,
@@ -216,7 +230,7 @@ func items(o *brendi.Order, products ProductMap) []Item {
 			UnitPrice:    unitPrice,
 			TotalPrice:   totalPrice,
 			Price:        totalPrice,
-			Observations: item.SpecialInstructions,
+			Observations: observations,
 			Options:      options,
 		})
 	}

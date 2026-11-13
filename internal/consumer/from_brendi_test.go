@@ -124,6 +124,98 @@ func TestProductMapPrefersExternalCode(t *testing.T) {
 	}
 }
 
+func TestCustomerIDFallback(t *testing.T) {
+	for _, sourceID := range []string{"", "  ", "customer-from-source"} {
+		t.Run(sourceID, func(t *testing.T) {
+			order := loadOrder(t)
+			order.Customer.ID = sourceID
+			got := FromBrendi(order, ProductMap{})
+			if got.Customer.ID == "" || got.Customer.ID == "  " {
+				t.Fatal("customer id is empty")
+			}
+			if sourceID == "customer-from-source" && got.Customer.ID != sourceID {
+				t.Fatal("source customer id was replaced")
+			}
+			if got.Customer.ID != FromBrendi(order, ProductMap{}).Customer.ID {
+				t.Fatal("customer id changed on retry")
+			}
+			if got.Customer.Name != order.Customer.Name || got.Customer.Phone.Number != order.Customer.Phone.Number {
+				t.Fatal("customer details were lost")
+			}
+			if order.Customer.ID != sourceID {
+				t.Fatal("source customer was mutated")
+			}
+		})
+	}
+}
+
+func TestConfiguredFreeOptionsBecomeObservations(t *testing.T) {
+	order := loadOrder(t)
+	order.Items[0].SpecialInstructions = "picancia forte. hashi"
+	order.Items[0].Options = []brendi.ItemOption{
+		{Name: "chicken - peito de frango empanado", Quantity: 1},
+		{Name: "Enviar hashi", Quantity: 2, SpecialInstructions: "embalado"},
+	}
+	products := ProductMap{OptionsAsObservations: []string{"Enviar hashi", "chicken - peito de frango empanado"}}
+	got := FromBrendi(order, products)
+	if len(got.Items[0].Options) != 0 {
+		t.Fatal("configured free instructions still appear as inventory options")
+	}
+	want := "picancia forte. hashi\n1x chicken - peito de frango empanado\n2x Enviar hashi (embalado)"
+	if got.Items[0].Observations != want {
+		t.Fatalf("observations = %q, want %q", got.Items[0].Observations, want)
+	}
+	if got.Total != FromBrendi(order, ProductMap{}).Total || got.Items[0].TotalPrice != order.Items[0].TotalPrice.Value {
+		t.Fatal("converting instructions changed amounts")
+	}
+	if len(order.Items[0].Options) != 2 {
+		t.Fatal("source options were mutated")
+	}
+}
+
+func TestObservationConversionPreservesPaidMappedAndUnknownOptions(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		option   brendi.ItemOption
+		products ProductMap
+	}{
+		{"paid unit", brendi.ItemOption{Name: "Enviar hashi", Quantity: 1, UnitPrice: brendi.Price{Value: 2}}, ProductMap{}},
+		{"paid total", brendi.ItemOption{Name: "Enviar hashi", Quantity: 1, TotalPrice: brendi.Price{Value: 2}}, ProductMap{}},
+		{"source code", brendi.ItemOption{Name: "Enviar hashi", Quantity: 1, ExternalCode: "123"}, ProductMap{}},
+		{"mapped code", brendi.ItemOption{Name: "Enviar hashi", Quantity: 1}, ProductMap{ByName: map[string]string{"Enviar hashi": "123"}}},
+		{"unknown name", brendi.ItemOption{Name: "Outro complemento", Quantity: 1}, ProductMap{}},
+		{"invalid quantity", brendi.ItemOption{Name: "Enviar hashi", Quantity: 0}, ProductMap{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			order := loadOrder(t)
+			order.Items[0].Options = []brendi.ItemOption{tc.option}
+			tc.products.OptionsAsObservations = []string{"Enviar hashi"}
+			got := FromBrendi(order, tc.products).Items[0]
+			if len(got.Options) != 1 || got.Options[0].ID == "" || got.Options[0].Name != tc.option.Name {
+				t.Fatalf("option was lost: %+v", got)
+			}
+			if got.Observations != order.Items[0].SpecialInstructions {
+				t.Fatal("unexpected observation conversion")
+			}
+		})
+	}
+}
+
+func TestRepeatedItemIndexes(t *testing.T) {
+	order := loadOrder(t)
+	order.Items[0].Index = 1
+	second := order.Items[0]
+	second.ID = "second-item"
+	order.Items = append(order.Items, second)
+	got := FromBrendi(order, ProductMap{})
+	if got.Items[0].Index != 1 || got.Items[1].Index != 2 {
+		t.Fatalf("indexes = %d, %d", got.Items[0].Index, got.Items[1].Index)
+	}
+	if got.Items[1].ID != second.ID || order.Items[1].Index != 1 {
+		t.Fatal("source item or its id changed")
+	}
+}
+
 func TestOptionIDsInJSON(t *testing.T) {
 	order := loadOrder(t)
 	sourceID := "67a3158b-54ca-4f88-b69a-bef78b82ac70"

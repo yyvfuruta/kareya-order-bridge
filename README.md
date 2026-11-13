@@ -111,13 +111,25 @@ do código PDV do produto. Crie um JSON assim e aponte `BRIDGE_PRODUCT_MAP`:
   "byName": {
     "Donburi katsudon": "112",
     "Guioza suíno (6 un)": "205"
-  }
+  },
+  "optionsAsObservations": ["Enviar hashi"]
 }
 ```
 
 A busca tenta `byExternalCode` primeiro e depois `byName` (nome exato do item na
 Brendi). Sem mapa, o bridge devolve o `externalCode` original; se ele vier
 vazio, o Consumer provavelmente não consegue casar o item com o PDV.
+
+`optionsAsObservations` lista nomes exatos de opções que devem aparecer nas
+observações do produto. A conversão só acontece quando a opção não tem código
+PDV original nem mapeado, tem quantidade positiva e seus preços unitário e total
+são zero. O texto preserva o nome, a quantidade e as instruções da opção, junto
+com as observações existentes. Opções cobradas, mapeadas ou fora dessa lista
+continuam como complementos. Essa configuração exige a versão 0.1.4 ou posterior.
+
+O mapa é compartilhado entre produtos e complementos. Se um nome existir nos dois
+cadastros com códigos PDV diferentes, deixe esse nome fora de `byName` e use
+`byExternalCode` para códigos de origem distintos, quando disponíveis.
 
 ## Rodar local
 
